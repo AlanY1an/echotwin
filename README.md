@@ -2,9 +2,9 @@
 
 # EchoTwin
 
-*Give a voice an echo twin — a Discord companion that talks back in a cloned voice.*
+*An AI Discord voice bot that talks back in a cloned voice — give a voice an echo twin.*
 
-Full-duplex realtime Discord voice companion. Fish Audio cloned-voice TTS + Claude Haiku 4.5 LLM (with tool calling) + local streaming ASR (sherpa-onnx zipformer, partials while you speak) + Silero VAD.
+Full-duplex realtime Discord voice bot. Fish Audio cloned-voice TTS + Claude Haiku 4.5 LLM (with tool calling) + local streaming ASR (sherpa-onnx zipformer, partials while you speak) + Silero VAD.
 
 **What it does best today: one-on-one voice conversation.** Join a channel, talk naturally, get cloned-voice replies in well under a second (~400-1100ms mouth-to-ear, measured live) — speculative ASR/LLM execution, pre-opened TTS sockets, and cached fillers do the work. Barge-in, tool calls (time/date/weather), hot-swappable personas, per-turn cost tracking with budget caps.
 
@@ -168,6 +168,10 @@ The bot is **production-ready in Chinese** today. English deployment status,hone
 - ⚠️ The heuristic addressee fallback (regexes, word lists, length thresholds)is Chinese-tuned and golden-set-validated **for Chinese only**. In English,rely on the LLM arbiter (`gray_zone: llm`) and expect the fallback to be conservative.
 
 Contributions welcome — the golden-set format makes adding a new language a data problem, not an architecture problem.
+
+## Contributing
+
+PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup and the areas where help matters most (English heuristics pack, tool output i18n, multi-party hardening).
 
 ## Design notes
 

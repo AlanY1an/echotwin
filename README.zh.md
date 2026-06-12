@@ -2,9 +2,9 @@
 
 # EchoTwin
 
-*给一个声音造一个回声双生——用克隆声陪你语聊的 Discord 伙伴。*
+*用克隆声和你语聊的 AI Discord 语音 bot——给一个声音造一个回声双生。*
 
-Discord 全双工实时语音伙伴。Fish Audio 克隆声音 TTS + Claude Haiku 4.5 LLM(支持 tool calling)+ 本地流式 ASR(sherpa-onnx zipformer,边说边出 partial)+ Silero VAD。
+Discord 全双工实时语音 bot。Fish Audio 克隆声音 TTS + Claude Haiku 4.5 LLM(支持 tool calling)+ 本地流式 ASR(sherpa-onnx zipformer,边说边出 partial)+ Silero VAD。
 
 **当前最稳的体验:一对一语音对话。** 进频道直接说话,克隆声回复稳定亚秒级(真机实测 ~400-1100ms 出声)——投机执行(ASR/LLM)、TTS 连接预开、垫话缓存共同发力。支持打断、工具调用(时间/日期/天气)、人格热切换、逐轮记账 + 预算封顶。
 
