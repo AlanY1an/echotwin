@@ -19,7 +19,7 @@ Discord 全双工实时语音 bot。Fish Audio 克隆声音 TTS + Claude Haiku 4
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
-# 2. 下载本地模型(Silero VAD ~2MB + SenseVoiceSmall ~234MB)
+# 2. 下载本地模型(VAD + SenseVoice + 中英流式 ASR,共 ~440MB)
 bash scripts/download_models.sh
 
 # 3. 配置

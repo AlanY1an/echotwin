@@ -40,11 +40,16 @@ echo
 echo "Models ready in $MODELS_DIR"
 ls -lh "$MODELS_DIR"
 
-# --- Phase 2: 流式 paraformer(可选;首次运行 funasr_stream 时也会自动下载)---
+# --- Streaming ASR models (sherpa zipformer, zh + en, ~200MB total) ---
+# Pre-fetched here so neither first start nor a persona language switch
+# pauses for a download. Repo/file lists come from the factory table.
 echo
-echo "Prefetching paraformer-zh-streaming (modelscope cache, ~900MB)…"
+echo "Prefetching streaming ASR models (sherpa zipformer zh + en)…"
 .venv/bin/python - <<'PY'
-from modelscope import snapshot_download
-snapshot_download("iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online")
-print("paraformer-zh-streaming cached")
+from huggingface_hub import snapshot_download
+from echotwin.providers.factory import SHERPA_LANG_REPOS
+for lang, (repo, files) in SHERPA_LANG_REPOS.items():
+    print(f"  [{lang}] {repo}")
+    snapshot_download(repo, allow_patterns=files)
+print("streaming ASR models cached")
 PY

@@ -48,7 +48,7 @@ cp .env.example .env
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 bash scripts/download_models.sh   # Silero VAD (~2MB) + SenseVoiceSmall (~234MB)
-# 流式 ASR 模型(~100MB)首次运行时自动从 Hugging Face 下载
+                                  # + 中英两个流式 ASR 模型(共 ~200MB)
 ```
 
 ## 5. 配置
@@ -57,7 +57,7 @@ bash scripts/download_models.sh   # Silero VAD (~2MB) + SenseVoiceSmall (~234MB)
 cp config.example.yaml config.yaml
 ```
 
-仓库自带两个现成 persona:`ariana_en`(英文,默认,开箱即用)和 `ouyang_zh`(中文——打开文件把 `voice_id` 换成第 2 步拿到的模型 ID)。想自建就复制 `prompts/personas/_template.zh.md`(英文模板用 `_template.md`),填 `name`、`voice_id`、`language`(zh|en,决定全部 LLM prompt、默认语音文案,**以及流式 ASR 模型**——首次切新语言会自动下载 ~100MB 模型)、唤醒词和人设 prompt(文件正文就是 system prompt)。然后在 `config.yaml` 里设 `bot.active_persona: my_persona`。
+仓库自带两个现成 persona:`ariana_en`(英文,默认,开箱即用)和 `ouyang_zh`(中文——打开文件把 `voice_id` 换成第 2 步拿到的模型 ID)。想自建就复制 `prompts/personas/_template.zh.md`(英文模板用 `_template.md`),填 `name`、`voice_id`、`language`(zh|en,决定全部 LLM prompt、默认语音文案,**以及流式 ASR 模型**——两个模型下载脚本已预取,切换零等待)、唤醒词和人设 prompt(文件正文就是 system prompt)。然后在 `config.yaml` 里设 `bot.active_persona: my_persona`。
 
 默认配置开箱即用:流式 ASR、organic 多人模式开启、每日预算 $5 封顶。
 

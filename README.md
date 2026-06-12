@@ -21,7 +21,7 @@ The product surface is Chinese-first (personas, prompts, test data); code and do
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
-# 2. Download local models (Silero VAD ~2 MB + SenseVoiceSmall ~234 MB)
+# 2. Download local models (VAD + SenseVoice + streaming ASR zh/en, ~440 MB)
 bash scripts/download_models.sh
 
 # 3. Configure
