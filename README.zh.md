@@ -107,7 +107,7 @@ GET /stats.json    → {uptime_seconds, guilds, active_sessions}
 
 ## 写新 persona
 
-`prompts/personas/` 下加 `.md` 文件。Frontmatter 是 YAML,只有 `name` 和 `voice_id` 必填。`language: zh|en`(默认 `zh`)决定发给 LLM 的全部 prompt 语言——底座模板、仲裁 few-shot、默认垫话/反问、问候告别都跟着切;正文就是 system prompt,用同一种语言写。Per-persona 的 Fish Audio TTS 调音参数(temperature、 speed、volume 等)都可选 — 完整字段 + 注释见 `prompts/personas/_template.md`。基础模板(`prompts/base_template.md`)会自动给每个 persona 套上语音规则、情感标签、prompt 注入防御。
+`prompts/personas/` 下加 `.md` 文件。Frontmatter 是 YAML,只有 `name` 和 `voice_id` 必填。`language: zh|en`(默认 `zh`)决定发给 LLM 的全部 prompt 语言和**流式 ASR 模型**(耳朵跟着嘴走:中文配双语 zipformer,英文配英文 zipformer)——底座模板、仲裁 few-shot、默认垫话/反问、问候告别都跟着切;正文就是 system prompt,用同一种语言写。Per-persona 的 Fish Audio TTS 调音参数(temperature、 speed、volume 等)都可选 — 完整字段 + 注释见 `prompts/personas/_template.md`。基础模板(`prompts/base_template.md`)会自动给每个 persona 套上语音规则、情感标签、prompt 注入防御。
 
 切换:`/persona-admin use <id>`(仅 owner,私聊或频道均可)或 `config.yaml:bot.active_persona`。persona 是全局的——切换会影响 bot 所在的所有服务器(所以才限 owner)。切人格会自动重建唤醒词匹配器、addressee 检测器、快速回应音频缓存。
 

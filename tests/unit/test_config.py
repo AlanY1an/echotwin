@@ -84,7 +84,7 @@ def test_phase2_defaults():
     assert bot.speculative_llm is False, "投机 LLM 必须默认关(验收期手动开)"
     asr = ASRCfg()
     assert asr.emotion_sidecar is True
-    assert "zipformer" in asr.sherpa_stream.repo
+    assert asr.sherpa_stream.repo == ""  # empty = auto-select by persona language
 
 
 def _cfg_with_keys(tmp_path, token, fish, anthropic):
@@ -115,3 +115,16 @@ def test_missing_required_keys_listed(tmp_path):
     missing = missing_required_keys(_cfg_with_keys(tmp_path, "", "", ""))
     assert {"DISCORD_TOKEN", "FISH_AUDIO_API_KEY", "ANTHROPIC_API_KEY"} <= set(missing)
     assert missing_required_keys(_cfg_with_keys(tmp_path, "x", "y", "z")) == []
+
+
+def test_sherpa_repo_auto_selects_by_language(tmp_path):
+    """Empty repo config = pick the ASR model matching the persona language."""
+    from echotwin.providers.factory import resolve_sherpa_repo
+
+    repo, files = resolve_sherpa_repo("", "zh")
+    assert "bilingual-zh-en" in repo and files
+    repo, files = resolve_sherpa_repo("", "en")
+    assert "zipformer-en" in repo and files
+    # explicit repo wins; unknown repo gets no fixed file list (glob resolution)
+    repo, files = resolve_sherpa_repo("someone/custom-model", "en")
+    assert repo == "someone/custom-model" and files is None

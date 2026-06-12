@@ -103,7 +103,7 @@ class SherpaStreamCfg(BaseModel):
     # streaming zipformer bilingual zh-en, int8 (~100MB, auto-downloaded from HF).
     # Engine decision: funasr paraformer online failed all three spike gates on
     # M-series CPU (RTF≈1.5); sherpa measured chunk 15ms — see scripts/spike_*.py
-    repo: str = "csukuangfj/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20"
+    repo: str = ""  # empty = auto-select by persona language (zh: bilingual model, en: English zipformer)
     num_threads: int = 2
 
 

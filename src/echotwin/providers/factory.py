@@ -27,7 +27,44 @@ def make_vad(cfg: Config) -> VADProvider:
     raise ValueError(f"Unknown VAD provider: {name}")
 
 
-def make_asr(cfg: Config) -> ASRProvider:
+# Per-language streaming ASR models. The bilingual model is Chinese-first
+# (handles English words inside Chinese sentences, not full English speech);
+# English personas need the English zipformer for usable transcription.
+SHERPA_LANG_REPOS = {
+    "zh": (
+        "csukuangfj/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20",
+        [
+            "encoder-epoch-99-avg-1.int8.onnx",
+            "decoder-epoch-99-avg-1.onnx",
+            "joiner-epoch-99-avg-1.int8.onnx",
+            "tokens.txt",
+        ],
+    ),
+    "en": (
+        "csukuangfj/sherpa-onnx-streaming-zipformer-en-2023-06-26",
+        [
+            "encoder-epoch-99-avg-1-chunk-16-left-128.int8.onnx",
+            "decoder-epoch-99-avg-1-chunk-16-left-128.onnx",
+            "joiner-epoch-99-avg-1-chunk-16-left-128.int8.onnx",
+            "tokens.txt",
+        ],
+    ),
+}
+
+
+def resolve_sherpa_repo(configured: str, language: str) -> tuple[str, list[str] | None]:
+    """Empty config repo = auto-select by persona language. An explicit custom
+    repo gets no fixed file list — the provider falls back to glob resolution."""
+    if configured:
+        for repo, files in SHERPA_LANG_REPOS.values():
+            if configured == repo:
+                return repo, files
+        return configured, None
+    repo, files = SHERPA_LANG_REPOS.get(language, SHERPA_LANG_REPOS["zh"])
+    return repo, files
+
+
+def make_asr(cfg: Config, language: str = "zh") -> ASRProvider:
     name = cfg.asr.provider
     if name == "funasr_local":
         f = cfg.asr.funasr_local
@@ -39,7 +76,8 @@ def make_asr(cfg: Config) -> ASRProvider:
     if name == "sherpa_stream":
         from .asr.sherpa_stream import SherpaStreamASR
         s = cfg.asr.sherpa_stream
-        return SherpaStreamASR(repo=s.repo, num_threads=s.num_threads)
+        repo, files = resolve_sherpa_repo(s.repo, language)
+        return SherpaStreamASR(repo=repo, num_threads=s.num_threads, model_files=files)
     raise ValueError(f"Unknown ASR provider: {name}")
 
 

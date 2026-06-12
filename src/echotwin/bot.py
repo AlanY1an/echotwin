@@ -333,7 +333,7 @@ class VoiceAgentBot(discord.Client):
         await self._init_persona_resources()
 
         # Pre-load ASR model if local (FunASR loads ~5-10s on CPU)
-        asr_test = make_asr(self.config)
+        asr_test = make_asr(self.config, language=self.persona.language)
         if hasattr(asr_test, "preload"):
             try:
                 await asr_test.preload()
@@ -408,6 +408,12 @@ class VoiceAgentBot(discord.Client):
         from the CURRENT self.persona. Must run after load_runtime_config
         so a runtime persona override is reflected in these resources."""
         from .wake_word import WakeWordMatcher, FastResponseCache
+
+        # Per-user ASR instances are language-specific (the streaming model is
+        # auto-selected from persona.language) — drop them so the next audio
+        # frame recreates them with the right model after a persona switch.
+        for session in getattr(self, "sessions", {}).values():
+            session.asrs.clear()
 
         self.wake_matcher = WakeWordMatcher(wake_words=self.persona.wake_words)
         self.fast_cache = FastResponseCache(
@@ -657,7 +663,7 @@ class VoiceAgentBot(discord.Client):
 
         # Per-user ASR (lazy init on first voice frame)
         if user_id not in session.asrs:
-            asr = make_asr(self.config)
+            asr = make_asr(self.config, language=self.persona.language)
             await asr.open()
             session.asrs[user_id] = asr
 

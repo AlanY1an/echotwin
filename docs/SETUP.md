@@ -57,7 +57,7 @@ bash scripts/download_models.sh   # Silero VAD (~2MB) + SenseVoiceSmall (~234MB)
 cp config.example.yaml config.yaml
 ```
 
-Two ready-made personas ship with the repo: `ariana_en` (English, default — works out of the box) and `ouyang_zh` (Chinese — open it and replace `voice_id` with your model ID from step 2). To build your own, copy `prompts/personas/_template.md` (English) or `_template.zh.md` (Chinese), fill in `name`, `voice_id`, `language` (zh|en — switches every LLM prompt and default voice line), wake words, and the personality prompt (the body of the file IS the system prompt). Then set `bot.active_persona: my_persona` in `config.yaml`.
+Two ready-made personas ship with the repo: `ariana_en` (English, default — works out of the box) and `ouyang_zh` (Chinese — open it and replace `voice_id` with your model ID from step 2). To build your own, copy `prompts/personas/_template.md` (English) or `_template.zh.md` (Chinese), fill in `name`, `voice_id`, `language` (zh|en — switches every LLM prompt, default voice lines, AND the streaming-ASR model; the first run with a new language downloads ~100 MB), wake words, and the personality prompt (the body of the file IS the system prompt). Then set `bot.active_persona: my_persona` in `config.yaml`.
 
 The defaults are sane for a first run: streaming ASR, organic multi-party mode on, daily budget capped at $5.
 

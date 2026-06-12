@@ -164,7 +164,7 @@ The bot is **production-ready in Chinese** today. English deployment status,hone
 
 - ✅ Slash-command UI is fully localized (en/zh, per-user Discord locale).
 - ✅ The streaming ASR model is bilingual (zh-en); personas, wake words,fast-responses, fillers, and farewell lines are all per-persona text — write them in English and they synthesize in English.
-- ✅ Personas carry a `language: zh|en` field that switches every LLM-facing prompt: the base template (`base_template.md` / `base_template.en.md`), the arbiter prompt with language-native few-shot examples, default fillers/clarify lines, greeting/farewell generation, and filler keywords. Tool outputs (time/date/weather strings) are still Chinese-formatted — minor, on the roadmap.
+- ✅ Personas carry a `language: zh|en` field that also auto-selects the matching streaming-ASR model (Chinese-first bilingual zipformer vs English zipformer — the bot's ears follow its mouth) and switches every LLM-facing prompt: the base template (`base_template.md` / `base_template.en.md`), the arbiter prompt with language-native few-shot examples, default fillers/clarify lines, greeting/farewell generation, and filler keywords. Tool outputs (time/date/weather strings) are still Chinese-formatted — minor, on the roadmap.
 - ⚠️ The heuristic addressee fallback (regexes, word lists, length thresholds)is Chinese-tuned and golden-set-validated **for Chinese only**. In English,rely on the LLM arbiter (`gray_zone: llm`) and expect the fallback to be conservative.
 
 Contributions welcome — the golden-set format makes adding a new language a data problem, not an architecture problem.

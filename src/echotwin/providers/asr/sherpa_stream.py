@@ -31,6 +31,16 @@ _MODEL_FILES = [
     "joiner-epoch-99-avg-1.int8.onnx",
     "tokens.txt",
 ]
+def _pick(d, pattern: str) -> str:
+    """Pick a model file by glob, preferring int8 over fp32."""
+    matches = sorted(p.name for p in d.glob(pattern + ".onnx"))
+    int8 = [m for m in matches if ".int8." in m]
+    chosen = (int8 or matches)
+    if not chosen:
+        raise FileNotFoundError(f"{pattern}.onnx not found in {d}")
+    return chosen[0]
+
+
 _DECODE_MIN_SAMPLES = 1600   # 100ms @16k — partial refresh granularity
 _FLUSH_SILENCE_S = 0.4       # silence to flush the decoder look-ahead before final
 
@@ -47,8 +57,13 @@ class SherpaStreamASR(ASRProvider):
         repo: str = DEFAULT_REPO,
         num_threads: int = 2,
         keep_pcm_seconds: int = 30,
+        model_files: list[str] | None = None,
     ):
         self._repo = repo
+        # Known repos pass their exact file list (filenames differ per repo,
+        # e.g. the en model has chunk-16-left-128 suffixes); None = download
+        # candidates by pattern and resolve by glob, preferring int8.
+        self._model_files = model_files
         self._num_threads = num_threads
         self._recognizer = None
         self._stream = None
@@ -86,12 +101,26 @@ class SherpaStreamASR(ASRProvider):
                 from huggingface_hub import snapshot_download
                 import sherpa_onnx
 
-                d = Path(snapshot_download(self._repo, allow_patterns=_MODEL_FILES))
+                files = self._model_files
+                if files is not None:
+                    d = Path(snapshot_download(self._repo, allow_patterns=files))
+                    encoder, decoder, joiner = files[0], files[1], files[2]
+                else:
+                    d = Path(snapshot_download(
+                        self._repo,
+                        allow_patterns=[
+                            "encoder*.int8.onnx", "decoder*.onnx",
+                            "joiner*.int8.onnx", "tokens.txt",
+                        ],
+                    ))
+                    encoder = _pick(d, "encoder*")
+                    decoder = _pick(d, "decoder*")
+                    joiner = _pick(d, "joiner*")
                 return sherpa_onnx.OnlineRecognizer.from_transducer(
                     tokens=str(d / "tokens.txt"),
-                    encoder=str(d / _MODEL_FILES[0]),
-                    decoder=str(d / _MODEL_FILES[1]),
-                    joiner=str(d / _MODEL_FILES[2]),
+                    encoder=str(d / encoder),
+                    decoder=str(d / decoder),
+                    joiner=str(d / joiner),
                     num_threads=self._num_threads,
                     sample_rate=16000,
                     feature_dim=80,

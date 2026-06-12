@@ -57,7 +57,7 @@ asr:
   funasr_local:
     model_dir: models/SenseVoiceSmall
     device: cpu # cpu | mps | cuda
-    language: zh
+    language: auto # SenseVoice self-detects; emotion tags work for zh and en alike
 
 llm:
   provider: claude_haiku
