@@ -54,7 +54,7 @@ src/echotwin/
 ├── tools/                 # base + registry + get_time / get_date / get_weather
 ├── wake_word/             # matcher + fast_response cache
 ├── commands/public.py     # /join /leave /say /sleep /wake /persona
-├── commands/owner_dm.py   # /persona-admin /voice-admin /admin (DM only, owner only)
+├── commands/owner_dm.py   # /persona-admin /voice-admin /admin (owner only, DM or guild)
 ├── cost/{tracker,pricing}.py  # SQLite cost ledger
 ├── monitoring/health_server.py  # aiohttp :9090 healthz/stats.json
 └── utils/{retry,quota,sentence_chunker}.py
@@ -204,7 +204,7 @@ Per-turn `[latency]` log line: endpoint→asr_done→consumer_start→llm_first_
 
 Public (everyone): `/join`, `/leave`, `/say <text>` (max 500 chars), `/sleep`, `/wake`, `/persona current|list`.
 
-Owner-only (DM only): `/persona-admin use <name>`, `/persona-admin reload`, `/voice-admin set <id>`, `/voice-admin show`, `/admin cost`, `/admin health`, `/admin wakeword on|off`, `/admin whitelist add|remove|list|clear`, `/admin owner add|remove|list`, `/admin reload-config`, `/admin restart`.
+Owner-only (DM or guild channel; replies ephemeral): `/persona-admin use <name>`, `/persona-admin reload`, `/voice-admin set <id>`, `/voice-admin show`, `/admin cost`, `/admin health`, `/admin wakeword on|off`, `/admin whitelist add|remove|list|clear`, `/admin owner add|remove|list`, `/admin reload-config`, `/admin restart`.
 
 `TEST_GUILD_ID` env var — when set, slash commands sync to that guild instantly (vs ~1h global).
 

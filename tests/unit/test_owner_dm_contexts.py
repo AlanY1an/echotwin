@@ -23,12 +23,14 @@ def _build_tree() -> app_commands.CommandTree:
     return tree
 
 
-def test_owner_groups_are_dm_only():
+def test_owner_groups_allowed_in_dm_and_guild():
+    """Admin groups work in DMs AND guild channels; the owner check + ephemeral
+    responses are the real gate, not the context restriction."""
     tree = _build_tree()
     for name in ("persona-admin", "voice-admin", "admin"):
         grp = tree.get_command(name)
         assert grp is not None, f"group {name} not registered"
         ctx = grp.allowed_contexts
-        assert ctx is not None, f"{name}: allowed_contexts 未设置(命令会在所有 guild 可见)"
-        assert ctx.dm_channel is True, f"{name}: 必须允许 DM"
-        assert ctx.guild is False, f"{name}: 不得允许 guild context"
+        assert ctx is not None, f"{name}: allowed_contexts unset (command would sync everywhere uncontrolled)"
+        assert ctx.dm_channel is True, f"{name}: DM must stay allowed"
+        assert ctx.guild is True, f"{name}: guild context must be allowed (owner-only via _is_owner)"

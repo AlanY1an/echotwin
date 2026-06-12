@@ -79,7 +79,7 @@ cp config.example.yaml config.yaml
 ## 7. 接下来
 
 - `/say 你好` — 跳过 LLM 的 TTS 冒烟测试
-- `/admin cost`(私聊 bot,仅 owner)— 查看花费
+- `/admin cost`(仅 owner,私聊或频道均可)— 查看花费
 - `kill -HUP <pid>` — 热加载 config.yaml + persona 修改,无需重启
 - 唤醒词快速路径:`.venv/bin/python -m scripts.synthesize_fast_responses`预合成秒回音频
 - 分层管线参考和调试指南:[`PIPELINE.zh.md`](PIPELINE.zh.md)

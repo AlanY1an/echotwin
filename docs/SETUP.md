@@ -79,7 +79,7 @@ First-run sanity checklist:
 ## 7. Useful next steps
 
 - `/say 你好` — quick TTS smoke test without the LLM
-- `/admin cost` (DM the bot, owner only) — spend so far
+- `/admin cost` (owner only, DM or any channel) — spend so far
 - `kill -HUP <pid>` — hot-reload config.yaml + persona edits, no restart
 - Wake-word fast path: cache instant audio replies with `.venv/bin/python -m scripts.synthesize_fast_responses`
 - Per-layer pipeline reference and debugging guide: [`PIPELINE.md`](PIPELINE.md)

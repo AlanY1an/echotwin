@@ -55,7 +55,7 @@ All slash command labels are localized — Discord shows them in your client lan
 | `/wake` | Wake from sleep |
 | `/persona current\|list` | Show active persona / list all personas |
 
-### Owner-only (DM the bot)
+### Owner-only (DM the bot or run in any channel — replies are private)
 
 | Command | What it does |
 |---|---|
@@ -112,7 +112,7 @@ GET /stats.json    → {uptime_seconds, guilds, active_sessions}
 
 Drop a `.md` file in `prompts/personas/`. Frontmatter is YAML; only `name` and `voice_id` are required. Set `language: zh|en` (default `zh`) to switch every LLM-facing prompt — base template, arbiter few-shots, default fillers/clarify lines, greeting/farewell — to that language; the file body becomes the system prompt, so write it in the same language. Per-persona Fish Audio TTS knobs (temperature, speed, volume, etc.) are optional — see `prompts/personas/_template.md` for the full scaffold with comments. The base template (`prompts/base_template.md`) supplies voice rules, emotion tags, and prompt-injection defenses to every persona.
 
-Switch via `/persona-admin use <id>` (DM, owner only) or `config.yaml:bot.active_persona`. Persona swap auto-rebuilds the wake-word matcher, addressee detector, and fast-response audio cache.
+Switch via `/persona-admin use <id>` (owner only, DM or any channel) or `config.yaml:bot.active_persona`. The persona is global — switching affects every server the bot is in (which is why it's owner-gated). Persona swap auto-rebuilds the wake-word matcher, addressee detector, and fast-response audio cache.
 
 ## Testing
 

@@ -1,4 +1,4 @@
-"""Owner-only slash commands, intended for DM context."""
+"""Owner-only slash commands (usable in DMs or guild channels; replies are ephemeral)."""
 from __future__ import annotations
 
 import json
@@ -444,11 +444,13 @@ def register_owner_commands(tree: app_commands.CommandTree, bot: "VoiceAgentBot"
                 msg = t("resp.owner_removed", loc, name=user.display_name)
         await interaction.response.send_message(msg, ephemeral=True)
 
-    # Restrict groups to DM context only. The attribute is
-    # `allowed_contexts` — assigning to `.contexts` is silently ignored
-    # by discord.py and the groups would sync as visible in every guild.
+    # Admin groups work in DMs and guild channels alike: every command
+    # gates on _is_owner and replies ephemerally, so the context restriction
+    # adds no security — it only forced owners to switch to a DM window.
+    # NOTE: the attribute is `allowed_contexts` — assigning to `.contexts`
+    # is silently ignored by discord.py.
     for grp in (persona_grp, voice_grp, admin_grp):
         grp.allowed_contexts = discord.app_commands.AppCommandContext(
-            guild=False, dm_channel=True, private_channel=False
+            guild=True, dm_channel=True, private_channel=False
         )
         tree.add_command(grp)
