@@ -17,7 +17,9 @@ The product surface is Chinese-first (personas, prompts, test data); code and do
 ## Quick start (macOS dev)
 
 ```bash
-# 1. Install
+# 1. Clone & install
+git clone https://github.com/AlanY1an/echotwin.git
+cd echotwin
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 

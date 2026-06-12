@@ -15,7 +15,9 @@ Discord 全双工实时语音 bot。Fish Audio 克隆声音 TTS + Claude Haiku 4
 ## Quick start (Mac dev)
 
 ```bash
-# 1. 安装
+# 1. 克隆 & 安装
+git clone https://github.com/AlanY1an/echotwin.git
+cd echotwin
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 

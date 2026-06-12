@@ -45,6 +45,8 @@ cp .env.example .env
 ## 4. 安装 & 下载模型
 
 ```bash
+git clone https://github.com/AlanY1an/echotwin.git
+cd echotwin
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 bash scripts/download_models.sh   # Silero VAD (~2MB) + SenseVoiceSmall (~234MB)
