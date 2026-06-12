@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.env
+.env.local
+data/
+models/
+*.db
+.pytest_cache/
+.DS_Store
+.claude/
+dev-docs/
+# Personal personas (cloned-voice IDs + private persona text) — only the template ships
+prompts/personas/*
+!prompts/personas/_template.md
+!prompts/personas/_template.zh.md
+# Live personal config — users copy config.example.yaml
+config.yaml
+!prompts/personas/ouyang_zh.md
+!prompts/personas/ariana_en.md

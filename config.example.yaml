@@ -1,0 +1,106 @@
+# EchoTwin config template — copy to config.yaml and adjust.
+# Use env:VAR_NAME to reference environment variables (loaded from .env).
+
+discord:
+  token: env:DISCORD_TOKEN
+
+bot:
+  name: MyBot # how the bot refers to itself
+  active_persona: ariana_en # bundled: ariana_en (English, works out of the box) / ouyang_zh (Chinese, fill voice_id first); or create your own from _template.md
+  history_window: 20 # conversation rounds kept in LLM context
+  idle_timeout_seconds: 120
+  barge_in_mode: addressee_only # addressee_only | anyone | never
+  listen_only_users: [] # empty = listen to everyone; else only these user IDs
+  wake_word_required: false # legacy mode (wake words live in the persona file)
+  endpoint_silence_ms: 600 # silence that marks an utterance as finished; raise to 800 if sentences get split
+  endpoint_tick_ms: 100 # endpoint polling granularity
+  speculative_asr: true # pre-run recognition at 300ms silence (batch ASR only; streaming has partials)
+  speculative_asr_silence_ms: 300
+  speculative_llm: true # pre-open the LLM stream on stable streaming-ASR partials
+  filler_mode: smart # smart = filler phrase only on predicted-slow turns / always / off
+  filler_keywords: [] # empty = language defaults by persona (zh: 天气/几点/…, en: weather/time/…)
+  organic: # multi-party conversation (no wake word once a conversation is going)
+    enabled: true
+    gray_zone: llm # llm = LLM arbitration for ambiguous utterances (falls back to heuristics); heuristic = scoring only
+    arbiter_provider: groq # groq = dedicated Groq client (llm.groq below); "" = reuse the conversation LLM
+    arbiter_timeout_ms: 1500 # arbitration timeout; heuristic fallback past this
+    arbiter_max_per_min: 20 # rate fuse per guild; over-rate falls back to heuristics
+    ambient_max_age_s: 120 # eavesdropped room chatter older than this is not injected as context
+    conversation_window_s: 45 # how long after the bot speaks the conversation counts as active
+    clarify_cooldown_s: 60 # per-user cooldown for the "are you talking to me?" prompt
+    open_floor_wait_ms: 1500 # wait for a human to take an open question before self-selecting
+    mention_reply_rate: 0.0 # probability of chiming in when mentioned in third person (0 = off)
+    clarify_llm: false # superseded by gray_zone: llm
+  empty_channel_timeout_seconds: 300 # leave after 5 min alone in the channel
+  inactivity_timeout_seconds: 120 # stage 1: people present but silent → spoken farewell
+  hard_timeout_seconds: 300 # stage 2: force disconnect
+  greeting:
+    enabled: true # introduce itself after /join
+    text: null # null = LLM-generated; or a fixed line
+  farewell:
+    enabled: true
+    text: null
+
+vad:
+  provider: silero
+  silero:
+    model_dir: models/silero_vad
+    threshold: 0.5
+    threshold_low: 0.3
+    min_silence_duration_ms: 800 # keep utterances joined despite micro-pauses
+    frame_window: 3 # consecutive voice frames before declaring speech (drops noise spikes)
+    preroll_ms: 300 # ring buffer prepended on speech start (fixes head-clipping)
+
+asr:
+  provider: sherpa_stream # streaming zipformer (partials while speaking); funasr_local = batch
+  emotion_sidecar: true # streaming mode: SenseVoice side-channel backfills emotion (lags one turn)
+  funasr_local:
+    model_dir: models/SenseVoiceSmall
+    device: cpu # cpu | mps | cuda
+    language: zh
+
+llm:
+  provider: claude_haiku
+  claude_haiku:
+    model: claude-haiku-4-5
+    api_key: env:ANTHROPIC_API_KEY
+    max_tokens: 300
+    temperature: 0.7
+    enable_prompt_cache: true
+  groq: # gray-zone arbitration only (~350ms, $0.29/$0.59 per MTok)
+    api_key: env:GROQ_API_KEY
+    model: qwen/qwen3-32b
+    max_tokens: 100
+    temperature: 0.0
+
+addressee: # legacy detector (used when organic.enabled is false)
+  continuation_window_seconds: 0
+  solo_channel_auto: true
+
+tools:
+  enabled:
+    - get_time
+    - get_date
+    - get_weather
+  default_timezone: Asia/Taipei
+  get_weather:
+    default_city: Boston # uses keyless wttr.in — no API key needed
+
+tts:
+  provider: fish_audio_stream
+  fish_audio_stream:
+    api_key: env:FISH_AUDIO_API_KEY
+    voice_id: "" # leave empty — comes from the active persona
+    fallback_voice_id: ""
+    model: s2-pro
+    latency: low
+
+cost:
+  daily_budget_usd: 5.0
+  monthly_budget_usd: 50.0
+  on_exceed: warn # warn | shutdown
+  store_path: data/costs.db
+
+monitoring:
+  http_port: 9090
+  heartbeat_interval_seconds: 60
