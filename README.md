@@ -6,7 +6,7 @@
 
 Full-duplex realtime Discord voice bot. Fish Audio cloned-voice TTS + Claude Haiku 4.5 LLM (with tool calling) + local streaming ASR (sherpa-onnx zipformer, partials while you speak) + Silero VAD.
 
-**What it does best today: one-on-one voice conversation.** Join a channel, talk naturally, get cloned-voice replies in well under a second (~400-1100ms mouth-to-ear, measured live) — speculative ASR/LLM execution, pre-opened TTS sockets, and cached fillers do the work. Barge-in, tool calls (time/date/weather), hot-swappable personas, per-turn cost tracking with budget caps.
+**What it does best today: one-on-one voice conversation.** Join a channel, talk naturally, get cloned-voice replies fast: first voice in ~0.6 s, full reply pipeline ~1.2 s median (ASR 19 ms / LLM ~970 ms / Fish TTS 174 ms — measured, reproducible, see [Latency](#latency)) — speculative ASR/LLM execution, pre-opened TTS sockets, and cached fillers do the work. Barge-in, tool calls (time/date/weather), hot-swappable personas, per-turn cost tracking with budget caps.
 
 **Experimental: organic multi-party mode.** In group channels, a three-layer addressee pipeline decides whether each utterance is directed at the bot — table-lookup reflexes settle the obvious cases instantly, ambiguous ones go to a fast LLM arbiter (Groq qwen3-32b, ~350ms, reading the room's recent transcript), and a golden-set-tested heuristic ruleset backstops failures. Rejected chatter feeds a rolling ambient transcript so accepted replies land in context; open questions yield the floor to humans first; utterances queued during playback merge into one reply. It works and ships on by default, but it's under active development — expect occasional wrong calls about when to speak.
 
@@ -148,17 +148,30 @@ The addressee heuristics are acceptance-tested against a golden set of ~70 label
 
 ## Latency
 
-Measured on live Discord traffic (macOS M-series, local ASR, `[latency]` log line per turn):
+Latency here comes in two kinds, and we report them separately — some of the wait is **conversation design**, not pipeline cost.
 
-| Stage | Typical |
-|---|---|
-| End-of-speech detection → ASR final text | 15-30 ms (streaming ASR already consumed the audio) |
-| Dispatch / queue | ~40 ms |
-| LLM first token | **~0 ms on speculation hit** (stream pre-opened while you were still talking) / 100-700 ms otherwise |
-| First TTS audio chunk | 230-550 ms |
-| **Total mouth-to-ear** | **best 361 ms, typically 0.6-1.1 s** |
+**Deliberate waits (by design, not slowness):**
 
-How it gets there: streaming ASR partials trigger a speculative LLM stream before you finish the sentence; the TTS WebSocket is pre-opened at enqueue time; predicted-slow turns (tool calls) play a cached filler phrase immediately so the wait never feels dead. Reproduce with `.venv/bin/python -m tests.perf.bench_e2e_latency` or read the per-turn `[latency]` log line.
+| Wait | Time | Why it exists |
+|---|---|---|
+| End-of-turn silence (VAD) | 500 ms (tunable) | The bot waits to be sure you've finished before it answers — the same pause a polite human makes. Shrinking it trades speed for cutting speakers off mid-sentence. |
+| Multi-party turn-taking | varies | In group channels the bot yields open questions to humans (~1.5 s), merges utterances queued during playback, and arbitrates whether it was even addressed. Waiting is the feature. |
+
+**Pipeline cost (controlled benchmark: single user, no queueing, production config — persona prompt, tools schema, prompt cache, s2-pro low-latency TTS; p50 of 12 runs):**
+
+| Stage | p50 | Notes |
+|---|---|---|
+| Streaming ASR tail | **19 ms** | The transcript is ready ~20 ms after you stop — the streaming ASR consumed the audio while you spoke |
+| LLM first sentence (Haiku 4.5, prompt-cached) | ~970 ms | The dominant cost: TTFT ~690 ms + first-sentence completion. TTS starts on the first *sentence*, not the first token |
+| Fish Audio TTS first audio | **174 ms** | s2-pro `latency: low` over a pre-opened WebSocket — the TTS is 10 % of the pipeline, never the bottleneck |
+| Discord playout | ~40 ms | Fixed transport cost |
+| **Pipeline total** | **~1.2 s** | |
+
+Median mouth-to-ear = 550 ms deliberate wait + ~1.2 s pipeline ≈ **1.75 s**; the fastest logged production turn ran **361 ms** endpoint-to-first-audio (speculative LLM hit). Perceived latency is lower still: predicted-slow turns play a cached local filler phrase ~0.6 s after you stop talking, so the wait never feels dead.
+
+How the pipeline stays this flat: streaming ASR partials open a speculative LLM stream before you finish the sentence (a hit hides the entire VAD wait), the TTS WebSocket is pre-opened at enqueue time (hiding its ~180 ms handshake), and the system prompt is cache-controlled.
+
+Full methodology, raw data, the fast first-sentence-model experiment (qwen3-32b: 369 ms vs Haiku's 971 ms), and the how-low-can-it-go analysis: **[`docs/LATENCY.md`](docs/LATENCY.md)**. Reproduce every number with `scripts/bench_latency.py` and `scripts/bench_llm_models.py`; live-traffic equivalents in `tests/perf/` and the per-turn `[latency]` log line.
 
 ## Language support
 
