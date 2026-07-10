@@ -1590,7 +1590,9 @@ class VoiceAgentBot(discord.Client):
             if session.alone_seconds >= self.config.bot.empty_channel_timeout_seconds:
                 logger.info(f"[guild {guild_id}] empty channel timeout, leaving")
                 from .commands.public import _graceful_leave
-                await _graceful_leave(self, guild, reason="empty_channel")
+                # No humans left to hear a goodbye — disconnect silently, skipping
+                # a pointless LLM/TTS farewell to an empty room.
+                await _graceful_leave(self, guild, reason="empty_channel", say_farewell=False)
                 return
             return
 
@@ -1609,27 +1611,34 @@ class VoiceAgentBot(discord.Client):
             await _graceful_leave(self, guild, reason="hard_timeout")
             return
 
-        # Stage 1: speak goodbye then wait grace 5s for activity
+        # Stage 1: speak the single LLM farewell then wait grace for activity.
+        # The post-goodbye disconnect below is silent so we don't say it twice.
         if not session.goodbye_pending and elapsed > inactivity:
             logger.info(
                 f"[guild {guild_id}] inactivity timeout ({elapsed:.0f}s) — sending goodbye"
             )
             session.goodbye_pending = True
             try:
-                from .commands.public import _speak_text
-                await _speak_text(guild.voice_client, self, self.persona.farewell_text)
+                from .commands.public import _generate_farewell, _speak_text
+                if self.config.bot.farewell.enabled:
+                    text = await _generate_farewell(self, guild.voice_client, "inactivity")
+                    if text and text.strip():
+                        await _speak_text(guild.voice_client, self, text)
             except Exception as e:
                 logger.warning(f"[idle] goodbye TTS failed: {e}")
             # Reset clock so we don't immediately re-trigger; allow ~5s grace
             session.last_activity_time = self.loop.time() - inactivity + 5
             return
 
-        # Goodbye was sent and grace expired without new activity → disconnect
+        # Goodbye was already spoken in Stage 1; grace expired → disconnect
+        # silently (say_farewell=False) so we don't repeat a second goodbye.
         if session.goodbye_pending and elapsed > inactivity + 1:
             logger.info(f"[guild {guild_id}] post-goodbye grace expired, leaving")
             from .commands.public import _graceful_leave
             session.goodbye_pending = False
-            await _graceful_leave(self, guild, reason="inactivity_after_goodbye")
+            await _graceful_leave(
+                self, guild, reason="inactivity_after_goodbye", say_farewell=False
+            )
 
     async def _heartbeat_loop(self) -> None:
         while not self.is_closed():

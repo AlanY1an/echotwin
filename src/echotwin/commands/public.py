@@ -197,35 +197,53 @@ async def _do_greeting(bot: "VoiceAgentBot", voice_client: discord.VoiceClient, 
     await _speak_text(voice_client, bot, text)
 
 
-async def _graceful_leave(bot: "VoiceAgentBot", guild: discord.Guild, reason: str) -> None:
-    """Say farewell, then disconnect from voice."""
+async def _generate_farewell(bot: "VoiceAgentBot", vc: discord.VoiceClient, reason: str) -> str:
+    """Produce a farewell line: a fixed config text, else LLM-improvised in persona.
+
+    Farewell is LLM-first by design — on any LLM failure we fall back to the
+    language-default line (i18n.DEFAULT_FAREWELL), never a per-persona hardcoded
+    phrase. Callers own the "should I even speak" decision (see say_farewell).
+    """
+    fixed = bot.config.bot.farewell.text
+    if fixed is not None:
+        return fixed
+    try:
+        channel_name = vc.channel.name if vc.channel else ""
+        sys_prompt = render_system_prompt(
+            bot.persona,
+            bot.persona.name,
+            channel_name=channel_name,
+            members_online=1,
+        )
+        prompt = _locale.FAREWELL_PROMPT[bot.persona.language].format(
+            channel=channel_name, reason=reason
+        )
+        text = ""
+        async for delta in stream_text_only(
+            bot.llm, sys_prompt, [{"role": "user", "content": prompt}]
+        ):
+            text += delta
+        if text.strip():
+            return text
+    except Exception as e:
+        logger.warning(f"farewell LLM failed: {e}")
+    return _locale.DEFAULT_FAREWELL[bot.persona.language]
+
+
+async def _graceful_leave(
+    bot: "VoiceAgentBot", guild: discord.Guild, reason: str, *, say_farewell: bool = True
+) -> None:
+    """Optionally say farewell, then disconnect from voice.
+
+    Pass say_farewell=False for the idle post-goodbye disconnect (Stage 1 already
+    spoke the single goodbye) and for the empty-channel case (no one to hear it).
+    """
     vc = guild.voice_client
     if vc is None:
         return
 
-    if bot.config.bot.farewell.enabled:
-        text = bot.config.bot.farewell.text
-        if text is None:
-            try:
-                channel_name = vc.channel.name if vc.channel else ""
-                sys_prompt = render_system_prompt(
-                    bot.persona,
-                    bot.persona.name,
-                    channel_name=channel_name,
-                    members_online=1,
-                )
-                prompt = _locale.FAREWELL_PROMPT[bot.persona.language].format(
-                    channel=channel_name, reason=reason
-                )
-                text = ""
-                async for delta in stream_text_only(
-                    bot.llm, sys_prompt, [{"role": "user", "content": prompt}]
-                ):
-                    text += delta
-            except Exception as e:
-                logger.warning(f"farewell LLM failed: {e}")
-                # Per-persona farewell (correct language/voice) instead of a hardcoded phrase
-                text = bot.persona.farewell_text
+    if say_farewell and bot.config.bot.farewell.enabled:
+        text = await _generate_farewell(bot, vc, reason)
         if text and text.strip():
             try:
                 await _speak_text(vc, bot, text)
