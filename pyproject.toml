@@ -14,6 +14,12 @@ dependencies = [
     "msgpack>=1.1.0",
     "anthropic>=0.40.0",
     "funasr>=1.0.0",
+    # funasr imports torch/torchaudio/librosa lazily at model-load time —
+    # they are hard runtime requirements for the SenseVoice batch ASR path
+    # even though funasr's own metadata doesn't declare them.
+    "torch>=2.0",
+    "torchaudio>=2.0",
+    "librosa>=0.10",
     "onnxruntime>=1.17.0",
     # Streaming ASR: funasr paraformer online is unusable on M-series CPU (RTF≈1.5);
     # sherpa zipformer int8 measures ~15ms/chunk (scripts/spike_*.py)
