@@ -18,6 +18,8 @@ from .base import (
 
 
 class ClaudeHaikuProvider(LLMProvider):
+    cost_prefix = "claude_haiku_4_5"  # pricing-table key prefix
+
     def __init__(
         self,
         api_key: str,

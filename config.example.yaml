@@ -60,13 +60,21 @@ asr:
     language: auto # SenseVoice self-detects; emotion tags work for zh and en alike
 
 llm:
-  provider: claude_haiku
+  provider: claude_haiku # claude_haiku (default: best persona + reliable tools) | groq_chat (fast casual chat, see caveats below)
   claude_haiku:
     model: claude-haiku-4-5
     api_key: env:ANTHROPIC_API_KEY
     max_tokens: 300
     temperature: 0.7
     enable_prompt_cache: true
+  groq_chat: # main brain on Groq (streaming + tools). Measured: ~500ms faster first
+    # sentence than Haiku for casual chat, BUT free-tier TPM (~6k) dies after
+    # ~3 turns/min, tool calling is unreliable with reasoning off, and replies
+    # drop the emotion tags. Viable with a paid tier + a trimmed prompt.
+    api_key: env:GROQ_API_KEY
+    model: qwen/qwen3-32b
+    max_tokens: 300
+    temperature: 0.7
   groq: # gray-zone arbitration only (~350ms, $0.29/$0.59 per MTok)
     api_key: env:GROQ_API_KEY
     model: qwen/qwen3-32b

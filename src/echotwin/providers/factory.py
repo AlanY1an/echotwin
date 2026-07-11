@@ -94,6 +94,18 @@ def make_llm(cfg: Config) -> LLMProvider:
             temperature=c.temperature,
             enable_prompt_cache=c.enable_prompt_cache,
         )
+    if name == "groq_chat":
+        from .llm.groq_chat import GroqChatProvider
+
+        g = cfg.llm.groq_chat
+        if not g.api_key:
+            raise ValueError("groq_chat requires GROQ_API_KEY")
+        return GroqChatProvider(
+            api_key=g.api_key,
+            model=g.model,
+            max_tokens=g.max_tokens,
+            temperature=g.temperature,
+        )
     raise ValueError(f"Unknown LLM provider: {name}")
 
 

@@ -124,17 +124,27 @@ class ClaudeHaikuCfg(BaseModel):
 
 
 class GroqCfg(BaseModel):
-    """Groq (OpenAI-compatible) — currently only used for organic gray-zone arbitration."""
+    """Groq (OpenAI-compatible) — organic gray-zone arbitration."""
     api_key: str | None = None
     model: str = "qwen/qwen3-32b"
     max_tokens: int = 100
     temperature: float = 0.0
 
 
+class GroqChatCfg(BaseModel):
+    """Groq as the MAIN conversation brain (streaming + tool use).
+    Separate from the arbiter's GroqCfg — different token/temperature needs."""
+    api_key: str | None = None
+    model: str = "qwen/qwen3-32b"
+    max_tokens: int = 300
+    temperature: float = 0.7
+
+
 class LLMCfg(BaseModel):
-    provider: str = "claude_haiku"
+    provider: str = "claude_haiku"  # claude_haiku | groq_chat
     claude_haiku: ClaudeHaikuCfg = Field(default_factory=ClaudeHaikuCfg)
     groq: GroqCfg = Field(default_factory=GroqCfg)
+    groq_chat: GroqChatCfg = Field(default_factory=GroqChatCfg)
 
 
 class FishAudioStreamCfg(BaseModel):

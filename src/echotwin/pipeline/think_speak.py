@@ -501,15 +501,18 @@ async def respond_to_user(
                 user_id=str(user_id),
                 sentence_id=sentence_id,
             )
+            # Cost kind follows the active provider (claude_haiku_4_5 /
+            # groq_qwen3_32b / …); unknown kinds price to 0 in the tracker.
+            _kind = getattr(bot.llm, "cost_prefix", "claude_haiku_4_5")
             try:
                 if usage_input:
-                    await tracker.record("claude_haiku_4_5_input", usage_input, **ids)
+                    await tracker.record(f"{_kind}_input", usage_input, **ids)
                 if usage_output:
-                    await tracker.record("claude_haiku_4_5_output", usage_output, **ids)
+                    await tracker.record(f"{_kind}_output", usage_output, **ids)
                 if usage_cache_write:
-                    await tracker.record("claude_haiku_4_5_cache_write", usage_cache_write, **ids)
+                    await tracker.record(f"{_kind}_cache_write", usage_cache_write, **ids)
                 if usage_cache_read:
-                    await tracker.record("claude_haiku_4_5_cache_read", usage_cache_read, **ids)
+                    await tracker.record(f"{_kind}_cache_read", usage_cache_read, **ids)
                 if tts_bytes_sent:
                     await tracker.record("fishaudio_tts", tts_bytes_sent, **ids)
             except Exception as e:
