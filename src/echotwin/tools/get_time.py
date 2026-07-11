@@ -23,16 +23,19 @@ class GetTime(Tool):
         },
     }
 
-    def __init__(self, default_timezone: str = "Asia/Taipei"):
+    def __init__(self, default_timezone: str = "Asia/Taipei", lang: str = "zh"):
         self._default_tz = default_timezone
+        self._lang = lang
 
     async def execute(self, args: dict) -> str:
         tz_name = args.get("timezone") or self._default_tz
         try:
             tz = ZoneInfo(tz_name)
         except ZoneInfoNotFoundError:
-            raise ToolError(f"未知时区: {tz_name}")
+            raise ToolError(f"未知时区: {tz_name}" if self._lang == "zh" else f"Unknown timezone: {tz_name}")
         now = datetime.now(tz)
+        if self._lang == "en":
+            return now.strftime(f"It is %A, %B %-d, %Y, %-I:%M %p ({tz_name})")
         ampm = "上午" if now.hour < 12 else "下午"
         h12 = now.hour % 12 or 12
         return (

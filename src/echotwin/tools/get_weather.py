@@ -41,7 +41,12 @@ _CITY_ALIAS = {
 
 
 def _resolve_city(name: str) -> str:
-    return _CITY_ALIAS.get(name.strip(), name.strip())
+    name = name.strip()
+    # "Houston, Texas" / "Houston Texas" → "Houston": keep the city, drop the
+    # region so wttr.in geocodes the city, not the state.
+    if "," in name:
+        name = name.split(",")[0].strip()
+    return _CITY_ALIAS.get(name, name)
 
 
 class GetWeather(Tool):
@@ -66,8 +71,9 @@ class GetWeather(Tool):
         },
     }
 
-    def __init__(self, default_city: str = "台北"):
+    def __init__(self, default_city: str = "台北", lang: str = "zh"):
         self._default_city = default_city
+        self._lang = lang
 
     async def _fetch(self, city: str) -> dict:
         url = f"{_BASE}/{city}?format=j1"
@@ -97,10 +103,18 @@ class GetWeather(Tool):
         if when == "today":
             cur_list = data.get("current_condition") or []
             if not cur_list:
-                raise ToolError(f"找不到 {raw_city} 的天气数据")
+                raise ToolError(
+                    f"找不到 {raw_city} 的天气数据" if self._lang == "zh"
+                    else f"No weather data for {raw_city}"
+                )
             cur = cur_list[0]
             desc_list = cur.get("weatherDesc") or []
             desc = desc_list[0].get("value", "") if desc_list else ""
+            if self._lang == "en":
+                return (
+                    f"{display_name}: {desc}, {cur.get('temp_C', '?')}°C, "
+                    f"{cur.get('winddir16Point', '')} wind, {cur.get('humidity', '')}% humidity"
+                )
             return (
                 f"{display_name} 现在 {desc} {cur.get('temp_C', '?')}°C, "
                 f"{cur.get('winddir16Point', '')}风, 湿度 {cur.get('humidity', '')}%"

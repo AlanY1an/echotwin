@@ -17,6 +17,7 @@ cache_control; the small/fast models make it a latency win regardless.
 from __future__ import annotations
 
 import json
+import re
 from typing import AsyncIterator
 
 import aiohttp
@@ -166,46 +167,65 @@ class GroqChatProvider(LLMProvider):
         finish_reason = "stop"
         usage: dict = {}
 
+        # Free-tier endpoints (Cerebras/Groq) rate-limit on requests-per-minute.
+        # A burst of turns can trip a 429 whose body says "try again in Ns".
+        # Retry a few times with backoff so a transient limit doesn't kill the
+        # turn mid-conversation (important during demos / rapid exchanges).
+        import asyncio
+        max_retries = 4
         async with aiohttp.ClientSession() as http:
-            async with http.post(
-                self._url, json=body, headers=headers,
-                timeout=aiohttp.ClientTimeout(total=60, sock_connect=10),
-            ) as resp:
-                if resp.status != 200:
-                    raise RuntimeError(f"Groq HTTP {resp.status}: {await resp.text()}")
-                async for raw in resp.content:
-                    line = raw.decode("utf-8", errors="replace").strip()
-                    if not line.startswith("data: "):
+            for attempt in range(max_retries + 1):
+                async with http.post(
+                    self._url, json=body, headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=60, sock_connect=10),
+                ) as resp:
+                    if resp.status == 429 and attempt < max_retries:
+                        body_txt = await resp.text()
+                        delay = 1.5 * (attempt + 1)
+                        m = re.search(r"try again in ([\d.]+)s", body_txt)
+                        if m:
+                            delay = float(m.group(1)) + 0.3
+                        logger.warning(
+                            f"[groq_chat] 429 rate-limited, retry {attempt + 1}/{max_retries} in {delay:.1f}s"
+                        )
+                        await asyncio.sleep(min(delay, 8.0))
                         continue
-                    payload = line[6:]
-                    if payload == "[DONE]":
-                        break
-                    chunk = json.loads(payload)
-                    if chunk.get("usage"):
-                        usage = chunk["usage"]
-                    choices = chunk.get("choices") or []
-                    if not choices:
-                        continue
-                    choice = choices[0]
-                    if choice.get("finish_reason"):
-                        finish_reason = choice["finish_reason"]
-                    delta = choice.get("delta") or {}
-                    if delta.get("content"):
-                        yield TextDelta(text=delta["content"])
-                    for tc in delta.get("tool_calls") or []:
-                        idx = tc.get("index", 0)
-                        if idx not in open_tools:
-                            tool_id = tc.get("id") or f"call_{idx}"
-                            open_tools[idx] = tool_id
-                            yield ToolUseStart(
-                                tool_use_id=tool_id,
-                                name=(tc.get("function") or {}).get("name", ""),
-                            )
-                        args = (tc.get("function") or {}).get("arguments")
-                        if args:
-                            yield ToolUseInputDelta(
-                                tool_use_id=open_tools[idx], partial_json=args
-                            )
+                    if resp.status != 200:
+                        raise RuntimeError(f"Groq HTTP {resp.status}: {await resp.text()}")
+                    async for raw in resp.content:
+                        line = raw.decode("utf-8", errors="replace").strip()
+                        if not line.startswith("data: "):
+                            continue
+                        payload = line[6:]
+                        if payload == "[DONE]":
+                            break
+                        chunk = json.loads(payload)
+                        if chunk.get("usage"):
+                            usage = chunk["usage"]
+                        choices = chunk.get("choices") or []
+                        if not choices:
+                            continue
+                        choice = choices[0]
+                        if choice.get("finish_reason"):
+                            finish_reason = choice["finish_reason"]
+                        delta = choice.get("delta") or {}
+                        if delta.get("content"):
+                            yield TextDelta(text=delta["content"])
+                        for tc in delta.get("tool_calls") or []:
+                            idx = tc.get("index", 0)
+                            if idx not in open_tools:
+                                tool_id = tc.get("id") or f"call_{idx}"
+                                open_tools[idx] = tool_id
+                                yield ToolUseStart(
+                                    tool_use_id=tool_id,
+                                    name=(tc.get("function") or {}).get("name", ""),
+                                )
+                            args = (tc.get("function") or {}).get("arguments")
+                            if args:
+                                yield ToolUseInputDelta(
+                                    tool_use_id=open_tools[idx], partial_json=args
+                                )
+                    break  # streamed successfully — leave the retry loop
 
         for tool_id in open_tools.values():
             yield ToolUseEnd(tool_use_id=tool_id)

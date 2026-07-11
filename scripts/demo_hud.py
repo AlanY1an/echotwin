@@ -63,12 +63,39 @@ def _user(m, line):
     return f"{GRAY}  ·  {name} said “{text}” — not addressed to bot ({verdict}), eavesdropping{R}"
 
 
+def _read_emotion(text: str) -> str | None:
+    """Ariana carries her felt emotion in the leading [bracket] cue. That cue
+    IS her read of the room — surface it as a 'senses' line. This reflects real
+    semantic understanding (she comforts sad, celebrates joy), unlike the
+    acoustic emotion classifier which stays flat on synthesized speech."""
+    cues = re.findall(r"\[([^\]]{1,40})\]", text)
+    if not cues:
+        return None
+    cue = cues[0].strip().lower()
+    buckets = [
+        (("sad", "soft", "warm", "gentle", "tender", "gentle", "gently", "gentle", "whisper", "sorry", "gentle"), "TENDERNESS — she softened to comfort"),
+        (("excited", "thrilled", "cheer", "delighted", "joy", "happy", "celebrat"), "JOY — she lit up to celebrate"),
+        (("laugh", "chuckle", "teasing", "playful", "grin", "smirk", "amused"), "PLAYFULNESS — she's bantering back"),
+        (("surprised", "shock", "gasp"), "SURPRISE"),
+        (("sigh", "tired", "exasperat"), "WRY — mock-exasperation"),
+    ]
+    for keys, label in buckets:
+        if any(k in cue for k in keys):
+            return label
+    return cue.upper()
+
+
 @on(r"\[respond\] LLM done, total_chars=\d+ text='(.*)'")
 def _bot(m, line):
     text = m.group(1)
     if not text:
         return None
-    return f"{MAGENTA}{BOLD}  🤖  EchoTwin{R}{MAGENTA}  “{text}”{R}"
+    out = ""
+    felt = _read_emotion(text)
+    if felt:
+        out += f"{PINK}{BOLD}  ♥  senses {felt}{R}\n"
+    out += f"{MAGENTA}{BOLD}  🤖  EchoTwin{R}{MAGENTA}  “{text}”{R}"
+    return out
 
 
 @on(r"\[tools\] (\w+)\((.*)\) → '(.*)'")
@@ -103,7 +130,8 @@ def _emotion(m, line):
     emo = m.group(1)
     if emo == "NEUTRAL":
         return None
-    return f"{PINK}  ♥  emotion detected in voice: {BOLD}{emo}{R}"
+    face = {"SAD": "😔", "HAPPY": "😄", "ANGRY": "😠", "SURPRISED": "😮", "FEARFUL": "😨", "DISGUSTED": "😖"}.get(emo, "♥")
+    return f"{PINK}{BOLD}  {face}  heard emotion in the voice: {emo}{R}"
 
 
 @on(r"\[nickname\] guild \d+: set nick to '(.*)'")

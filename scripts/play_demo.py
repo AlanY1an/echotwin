@@ -48,7 +48,7 @@ SCRIPT = [
     ("barge", "S8", "Boring! Skip to the good part."),  # special: fire mid-answer
     ("S9", "Okay that was rude. Sorry. You're actually kind of fun."),
     ("act", "ACT 5 · Soul swap (persona + bilingual)"),
-    ("cue", "In Discord, type:  /persona-admin use hinata   — then press ENTER"),
+    ("cmd", "/persona-admin use hinata"),
     ("S10", "哎?你声音怎么变啦?你现在是谁呀?"),
     ("S11", "太可爱了吧。行,我先撤了,下次聊!"),
     ("end", "— fin —"),
@@ -119,6 +119,16 @@ def main() -> None:
         elif kind == "cue":
             print(f"\n{BOLD}{CYAN}⚑ {item[1]}{R}")
             wait_enter()
+        elif kind == "cmd":
+            cmd = item[1]
+            pad = "  " + cmd + "  "
+            bar = "═" * len(pad)
+            print(f"\n{BOLD}{CYAN}   ┌{bar}┐{R}")
+            print(f"{BOLD}{CYAN}   │{R}{BOLD}{YELLOW}{pad}{R}{BOLD}{CYAN}│{R}")
+            print(f"{BOLD}{CYAN}   └{bar}┘{R}")
+            print(f"{BOLD}{MAGENTA}   ↑ TYPE THIS IN DISCORD NOW{R}{DIM} (click the Discord window, type it, hit send){R}")
+            print(f"{DIM}   The bot's voice + name will change. Then come back here and press ENTER.{R}")
+            wait_enter(f"{GREEN}   done switching → ENTER{R}")
         elif kind == "barge":
             _, lid, text = item
             print(f"\n{YELLOW}{BOLD}⚡ BARGE-IN next.{R} {DIM}{text}{R}")

@@ -37,10 +37,10 @@ OUT = REPO / "scripts" / "demo_lines"
 LINES = [
     ("S1", "en", "", "So. You're the famous Ariana everyone keeps talking about. Thought you'd be taller, honestly."),
     ("S2", "en", "", "People say you're the fastest voice bot on Discord. Prove it, I've got places to be."),
-    ("S3", "en", "", "Alright, make yourself useful. What's the weather like in Houston right now?"),
+    ("S3", "en", "", "Alright, useful time. What's the weather in Houston, Texas right now?"),
     ("S4", "en", "", "Mm-hm. And what time is it over there? Some of us have a life, you know."),
-    ("S5", "en", "[sad]", "Okay, real talk though... I've had a genuinely rough day. My flight got cancelled. Twice."),
-    ("S6", "en", "[excited]", "Oh, hold on, I just got the email. I got the job. I actually got it!"),
+    ("S5", "en", "[very depressed and defeated][speaking slowly and quietly]", "Honestly... I've had such a rough day. My flight got cancelled. Twice. I'm so drained."),
+    ("S6", "en", "[extremely excited][shouting with joy]", "Oh! Oh hold on! I just got the email, I got the job! I actually got it!"),
     ("S7", "en", "", "Okay Miss Popular, tell me your whole life story. Every detail. Don't leave anything out."),
     ("S8", "en", "", "Boring! Skip to the good part."),
     ("S9", "en", "", "Okay that was rude. Sorry. You're actually kind of fun."),

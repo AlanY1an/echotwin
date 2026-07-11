@@ -30,8 +30,9 @@ class GetDate(Tool):
         },
     }
 
-    def __init__(self, default_timezone: str = "Asia/Taipei"):
+    def __init__(self, default_timezone: str = "Asia/Taipei", lang: str = "zh"):
         self._default_tz = default_timezone
+        self._lang = lang
 
     async def execute(self, args: dict) -> str:
         offset = int(args.get("offset_days") or 0)
@@ -39,7 +40,9 @@ class GetDate(Tool):
         try:
             tz = ZoneInfo(tz_name)
         except ZoneInfoNotFoundError:
-            raise ToolError(f"未知时区: {tz_name}")
+            raise ToolError(f"未知时区: {tz_name}" if self._lang == "zh" else f"Unknown timezone: {tz_name}")
         target = datetime.now(tz) + timedelta(days=offset)
+        if self._lang == "en":
+            return target.strftime("%A, %B %-d, %Y")
         wd = _WEEKDAY_ZH[target.weekday()]
         return f"{target.year} 年 {target.month} 月 {target.day} 日 {wd}"

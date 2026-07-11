@@ -312,14 +312,17 @@ class VoiceAgentBot(discord.Client):
         self.tool_registry = ToolRegistry()
         enabled = set(self.config.tools.enabled)
         tz = self.config.tools.default_timezone
+        # Tool output language follows the active persona so an English persona
+        # gets English weather/time strings, not the zh defaults.
+        tool_lang = getattr(self.persona, "language", "zh") if getattr(self, "persona", None) else "zh"
         if "get_time" in enabled:
-            self.tool_registry.register(GetTime(default_timezone=tz))
+            self.tool_registry.register(GetTime(default_timezone=tz, lang=tool_lang))
         if "get_date" in enabled:
-            self.tool_registry.register(GetDate(default_timezone=tz))
+            self.tool_registry.register(GetDate(default_timezone=tz, lang=tool_lang))
         if "get_weather" in enabled:
             # wttr.in is keyless; no env var needed
             self.tool_registry.register(
-                GetWeather(default_city=self.config.tools.get_weather.default_city)
+                GetWeather(default_city=self.config.tools.get_weather.default_city, lang=tool_lang)
             )
 
         # Load runtime config FIRST (overrides config.yaml for persona/voice/
