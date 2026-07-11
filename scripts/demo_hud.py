@@ -139,6 +139,18 @@ def _persona(m, line):
     return _stage("PERSONA", m.group(1), PINK)
 
 
+@on(r"\[groq_chat\] 429 rate-limited, retry (\d+)/(\d+) in ([\d.]+)s")
+def _ratelimit(m, line):
+    n, total, wait = m.groups()
+    return _stage("RATE-LIMIT", f"429 from provider — waiting {wait}s, retry {n}/{total}", YELLOW)
+
+
+@on(r"(?:LLM stream error|ERROR).*?(?:Groq HTTP (\d+)|(\w+Error))")
+def _error(m, line):
+    what = m.group(1) or m.group(2) or "error"
+    return _stage("ERROR", f"{what} — see log", "\033[91m")  # bright red
+
+
 def render(line: str) -> str | None:
     for pat, fn in _PATTERNS:
         m = pat.search(line)
