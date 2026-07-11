@@ -90,6 +90,28 @@ def _filler(m, line):
     return f"{BLUE}  ⚡  instant filler audio playing (cached, 0ms network){R}"
 
 
+# --- live pipeline stages (fire as they happen, for the "dashboard" feel) ---
+
+@on(r"\[respond\] start: user=")
+def _stage_heard(m, line):
+    return f"{GRAY}   ├─ endpoint: they finished speaking{R}"
+
+
+@on(r"\[respond\] starting LLM stream")
+def _stage_think(m, line):
+    return f"{GRAY}   ├─ thinking… (LLM streaming){R}"
+
+
+@on(r"\[respond\] first TTS audio chunk received")
+def _stage_speak(m, line):
+    return f"{GREEN}   ├─ 🔊 first audio out — bot starts speaking{R}"
+
+
+@on(r"\[respond\] drain_tts done")
+def _stage_done(m, line):
+    return f"{GRAY}   └─ finished speaking{R}"
+
+
 @on(r"\[latency\] (.*) total=(\d+)ms")
 def _latency(m, line):
     stages, total = m.groups()
