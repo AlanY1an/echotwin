@@ -34,11 +34,8 @@ PINK = "\033[38;5;213m"
 BLUE = "\033[94m"
 GRAY = "\033[90m"
 
-BANNER = f"""{BOLD}{MAGENTA}
-  ╔══════════════════════════════════════════════╗
-  ║   EchoTwin · live pipeline telemetry         ║
-  ║   ASR → LLM → Fish Audio TTS  (all realtime) ║
-  ╚══════════════════════════════════════════════╝{R}
+BANNER = f"""{BOLD}{MAGENTA}EchoTwin — live pipeline trace{R}{DIM}
+ASR → addressee → LLM → tools → Fish TTS, per-turn timing{R}
 """
 
 _PATTERNS: list[tuple[re.Pattern, callable]] = []
@@ -55,61 +52,68 @@ def _ts(line: str) -> str:
     return line.split(" | ", 1)[0].split(".")[0]
 
 
+def _stage(label: str, body: str, color: str = R) -> str:
+    """One pipeline event: a fixed-width stage tag + the real data."""
+    return f"{color}{BOLD}{label:>8}{R}  {color}{body}{R}"
+
+
 # text is a Python repr — single OR double quoted depending on apostrophes.
-@on(r"""\[organic\] (\w+): verdict=(\w+) score=\d+ signals=(\[[^\]]*\]) text=(['"])(.*)\4""")
+@on(r"""\[organic\] (\w+): verdict=(\w+) score=(\d+) signals=(\[[^\]]*\]) text=(['"])(.*)\5""")
 def _user(m, line):
-    name, verdict, signals, _q, text = m.groups()
-    if verdict == "accept":
-        return f"{CYAN}{BOLD}  🎙  {name}{R}{CYAN}  “{text}”{R}"
-    return f"{GRAY}  ·  {name} said “{text}” — not addressed to the bot ({verdict}), just eavesdropping{R}"
+    name, verdict, score, signals, _q, text = m.groups()
+    heard = _stage("ASR", f'{name}: "{text}"', CYAN)
+    addr = _stage("ADDRESSEE", f"{verdict} · {signals} · score {score}", GRAY)
+    return heard + "\n" + addr
+
+
+@on(r"\[respond\] starting LLM stream")
+def _stage_llm(m, line):
+    return _stage("LLM", "stream start", GRAY)
+
+
+@on(r"\[emotion-sidecar\] uid=\d+ emotion=(\w+)")
+def _emotion(m, line):
+    emo = m.group(1)
+    return _stage("EMOTION", f"{emo}  (SenseVoice, from voice)", GRAY if emo == "NEUTRAL" else PINK)
+
+
+@on(r"\[tools\] (\w+)\((.*)\) → '(.*)'")
+def _tool(m, line):
+    name, args, result = m.groups()
+    return _stage("TOOL", f"{name}({args}) → {result[:60]}", YELLOW)
+
+
+@on(r"\[filler\] queued (\d+) packets")
+def _filler(m, line):
+    return _stage("FILLER", f"cached audio queued ({m.group(1)} packets)", BLUE)
 
 
 @on(r"""\[respond\] LLM done, total_chars=\d+ text=(['"])(.*)\1""")
 def _bot(m, line):
     text = m.group(2)
     if not text:
-        return None
-    # The model's own leading [bracket] cue, shown verbatim as its emotional
-    # intent — no editorializing.
-    out = ""
+        return _stage("REPLY", "(empty)", GRAY)
     cues = re.findall(r"\[([^\]]{1,40})\]", text)
+    out = ""
     if cues:
-        out += f"{PINK}{BOLD}  emotional tone: {cues[0].strip()}{R}\n"
-    out += f"{MAGENTA}{BOLD}  🤖  EchoTwin{R}{MAGENTA}  “{text}”{R}"
+        out += _stage("TONE", f"{cues[0].strip()}  (model's own tag)", PINK) + "\n"
+    out += _stage("REPLY", f'"{text}"', MAGENTA)
     return out
-
-
-@on(r"\[tools\] (\w+)\((.*)\) → '(.*)'")
-def _tool(m, line):
-    name, args, result = m.groups()
-    return f"{YELLOW}  ⚙︎  tool call  {BOLD}{name}({args}){R}{YELLOW} → {result[:60]}{R}"
-
-
-@on(r"\[filler\] queued \d+ packets")
-def _filler(m, line):
-    return f"{BLUE}  ⚡  instant filler audio playing (cached, 0ms network){R}"
-
-
-# --- live pipeline stages (fire as they happen, for the "dashboard" feel) ---
-
-@on(r"\[respond\] start: user=")
-def _stage_heard(m, line):
-    return f"{GRAY}   ├─ endpoint: they finished speaking{R}"
-
-
-@on(r"\[respond\] starting LLM stream")
-def _stage_think(m, line):
-    return f"{GRAY}   ├─ thinking… (LLM streaming){R}"
 
 
 @on(r"\[respond\] first TTS audio chunk received")
 def _stage_speak(m, line):
-    return f"{GREEN}   ├─ 🔊 first audio out — bot starts speaking{R}"
+    return _stage("TTS", "first audio out", GREEN)
 
 
 @on(r"\[respond\] drain_tts done")
 def _stage_done(m, line):
-    return f"{GRAY}   └─ finished speaking{R}"
+    return _stage("TTS", "playback done", GRAY)
+
+
+@on(r"\[respond\] interrupting prior playback")
+def _barge(m, line):
+    return _stage("BARGE-IN", "user spoke — stopping current playback", YELLOW)
 
 
 @on(r"\[latency\] (.*) total=(\d+)ms")
@@ -118,35 +122,21 @@ def _latency(m, line):
     total = int(total)
     parts = []
     for sm in re.finditer(r"(\w+)→(\w+)=(\d+)ms", stages):
-        a, b, ms = sm.group(1), sm.group(2), int(sm.group(3))
+        b, ms = sm.group(2), int(sm.group(3))
         label = {
-            "asr_done": "heard (ASR)", "consumer_start": "queue",
-            "filler_queued": "filler", "llm_first_delta": "thought (LLM)",
-            "first_audio": "spoke (Fish TTS)",
+            "asr_done": "asr", "consumer_start": "queue", "filler_queued": "filler",
+            "llm_first_delta": "llm", "first_audio": "tts",
         }.get(b, b)
-        parts.append(f"{label} {ms}ms")
-    # A turn with no LLM stage (empty/dropped) isn't worth a big timing line.
-    if total < 40 and "LLM" not in " ".join(parts) and "thought" not in " ".join(parts):
+        parts.append(f"{label} {ms}")
+    if total < 40 and "llm" not in " ".join(parts):
         return None
     color = GREEN if total < 1500 else YELLOW
-    return f"{color}  ⏱  {BOLD}{total}ms{R}{color} mouth-to-ear   {DIM}({'  →  '.join(parts)}){R}"
-
-
-@on(r"\[emotion-sidecar\] uid=\d+ emotion=(\w+)")
-def _emotion(m, line):
-    emo = m.group(1)
-    color = GRAY if emo == "NEUTRAL" else PINK
-    return f"{color}{BOLD}  voice emotion (SenseVoice): {emo}{R}"
+    return _stage("TIME", f"{total}ms  ({' · '.join(parts)})", color)
 
 
 @on(r"\[nickname\] guild \d+: set nick to '(.*)'")
 def _persona(m, line):
-    return f"{PINK}  ✦  persona active: {BOLD}{m.group(1)}{R}"
-
-
-@on(r"\[respond\] interrupting prior playback")
-def _barge(m, line):
-    return f"{YELLOW}{BOLD}  ✋  barge-in — user interrupted, bot stops mid-sentence{R}"
+    return _stage("PERSONA", m.group(1), PINK)
 
 
 def render(line: str) -> str | None:
