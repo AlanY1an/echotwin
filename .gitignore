@@ -22,3 +22,8 @@ config.yaml
 
 # Demo guest-line audio (regenerate with scripts/gen_guest_lines.py)
 scripts/demo_lines/
+
+# Local demo-recording aids (not part of the product)
+scripts/demo_hud.py
+scripts/play_demo.py
+scripts/gen_guest_lines.py
