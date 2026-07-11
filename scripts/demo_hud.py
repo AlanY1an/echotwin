@@ -139,6 +139,16 @@ def _persona(m, line):
     return _stage("PERSONA", m.group(1), PINK)
 
 
+@on(r"""\[greeting\] speaking: (['"])(.*)\1""")
+def _greeting(m, line):
+    return _stage("GREETING", f'"{m.group(2)}"', MAGENTA)
+
+
+@on(r"""\[farewell\] speaking \((\w+)\): (['"])(.*)\2""")
+def _farewell(m, line):
+    return _stage("FAREWELL", f'({m.group(1)}) "{m.group(3)}"', MAGENTA)
+
+
 @on(r"\[groq_chat\] 429 rate-limited, retry (\d+)/(\d+) in ([\d.]+)s")
 def _ratelimit(m, line):
     n, total, wait = m.groups()

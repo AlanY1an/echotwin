@@ -194,6 +194,7 @@ async def _do_greeting(bot: "VoiceAgentBot", voice_client: discord.VoiceClient, 
             text += delta
     if not text.strip():
         return
+    logger.info(f"[greeting] speaking: {text!r}")
     await _speak_text(voice_client, bot, text)
 
 
@@ -246,6 +247,7 @@ async def _graceful_leave(
         text = await _generate_farewell(bot, vc, reason)
         if text and text.strip():
             try:
+                logger.info(f"[farewell] speaking ({reason}): {text!r}")
                 await _speak_text(vc, bot, text)
             except Exception as e:
                 logger.warning(f"farewell TTS failed: {e}")
