@@ -116,6 +116,21 @@ def _barge(m, line):
     return _stage("BARGE-IN", "user spoke — stopping current playback", YELLOW)
 
 
+@on(r"\[barge-in\] voice detected — ducking playback to (\d+%)")
+def _duck(m, line):
+    return _stage("DUCK", f"voice detected — playback volume → {m.group(1)}", YELLOW)
+
+
+@on(r"\[barge-in\] sustained speech (\d+)ms — stopping playback")
+def _barge_live(m, line):
+    return _stage("BARGE-IN", f"sustained speech {m.group(1)}ms — playback stopped", YELLOW)
+
+
+@on(r"\[barge-in\] false alarm — restoring playback volume")
+def _unduck(m, line):
+    return _stage("DUCK", "false alarm (backchannel) — volume restored", GRAY)
+
+
 @on(r"\[latency\] (.*) total=(\d+)ms")
 def _latency(m, line):
     stages, total = m.groups()

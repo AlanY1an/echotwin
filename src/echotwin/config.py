@@ -49,6 +49,11 @@ class BotCfg(BaseModel):
     history_window: int = 20
     idle_timeout_seconds: int = 120
     barge_in_mode: str = "addressee_only"
+    # Live barge-in: duck playback to this volume the moment the interrupter's
+    # voice is heard, and hard-stop once their speech sustains past the
+    # threshold. Backchannels stay under the threshold → brief duck, no stop.
+    barge_in_duck: float = Field(default=0.35, ge=0.0, le=1.0)
+    barge_in_sustain_ms: int = Field(default=500, ge=100)
     listen_only_users: list[int] = Field(default_factory=list)
     wake_word_required: bool = False
     # Endpoint detection: how many ms of silence mark an utterance as finished

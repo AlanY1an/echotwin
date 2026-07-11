@@ -73,6 +73,7 @@ def _fake_bot():
         loop=asyncio.get_event_loop(),
     )
     bot._abort_spec_llm = lambda spec: VoiceAgentBot._abort_spec_llm(bot, spec)
+    bot._restore_duck = lambda session: VoiceAgentBot._restore_duck(bot, session)
     return bot
 
 
@@ -168,6 +169,7 @@ def _fast_path_bot(played: list, aborted_via_queue: bool = False):
         loop=asyncio.get_event_loop(),
     )
     bot._abort_spec_llm = lambda spec: VoiceAgentBot._abort_spec_llm(bot, spec)
+    bot._restore_duck = lambda session: VoiceAgentBot._restore_duck(bot, session)
     return bot
 
 

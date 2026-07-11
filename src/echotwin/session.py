@@ -48,6 +48,9 @@ class VoiceSession:
     current_addressee_id: Optional[int] = None
     client_abort: bool = False
     is_audible: bool = False  # True only when bot is actually playing TTS audio
+    # The turn's live StreamingOpusAudioSource — bot.py ducks/restores it for
+    # live barge-in. Set by think_speak when playback starts, cleared after.
+    active_source: Optional[object] = None
     # LOOP-clock timestamp (asyncio loop.time()), NOT wallclock — _check_idle
     # compares against loop.time(). Set by get_or_create_session at creation;
     # the 0.0 default alone would make a fresh session look idle-since-boot.

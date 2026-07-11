@@ -240,6 +240,8 @@ async def respond_to_user(
         # Mark bot as audibly producing audio — used by _finalize_utterance to
         # drop short ASR garbage that would otherwise trigger spurious barge-in
         session.is_audible = True
+        # Expose the live source so bot.py can duck it for live barge-in
+        session.active_source = audio_source
 
         # Stream LLM with optional tool-use round-trips, chunk into sentences, push to TTS.
         # When the model decides to call a tool we execute it, append the tool_result, and
@@ -491,6 +493,7 @@ async def respond_to_user(
             pass
         # Bot no longer producing audio
         session.is_audible = False
+        session.active_source = None
 
         # Record this turn's spend (best-effort) — the quota guard and
         # /admin cost read from the cost tracker, so every turn must report.

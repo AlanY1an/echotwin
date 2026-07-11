@@ -664,6 +664,39 @@ class VoiceAgentBot(discord.Client):
             setattr(session, f"_utt_opus_ok_{user_id}", session.opus_ok.get(user_id, 0))
             setattr(session, f"_utt_opus_fail_{user_id}", session.opus_fail.get(user_id, 0))
 
+        # Live barge-in: the endpoint-time check in _finalize_utterance still
+        # owns the turn handoff; this only shapes playback while the user is
+        # STILL talking — duck immediately on voice, hard-stop once their
+        # speech sustains past barge_in_sustain_ms. Backchannels ("嗯", "ok")
+        # are shorter than the sustain threshold, so they duck briefly but
+        # never kill the reply; the duck is restored when they get dropped.
+        if (
+            session.state == SessionState.PROCESSING
+            and vad_result.is_voice
+            and self.config.bot.barge_in_mode in ("addressee_only", "anyone")
+            and (
+                self.config.bot.barge_in_mode == "anyone"
+                or user_id == session.current_addressee_id
+            )
+        ):
+            src = session.active_source
+            duck_to = self.config.bot.barge_in_duck
+            if src is not None and getattr(src, "duck", 1.0) > duck_to:
+                try:
+                    src.set_duck(duck_to)
+                    logger.info(f"[barge-in] voice detected — ducking playback to {duck_to:.0%}")
+                except Exception:
+                    pass
+            utt_ms_live = (
+                session.opus_ok.get(user_id, 0)
+                - getattr(session, f"_utt_opus_ok_{user_id}", 0)
+            ) * 20
+            if utt_ms_live >= self.config.bot.barge_in_sustain_ms and not session.client_abort:
+                logger.info(
+                    f"[barge-in] sustained speech {utt_ms_live}ms — stopping playback"
+                )
+                await session.abort()
+
         # Per-user ASR (lazy init on first voice frame)
         if user_id not in session.asrs:
             asr = make_asr(self.config, language=self.persona.language)
@@ -686,6 +719,16 @@ class VoiceAgentBot(discord.Client):
                 setattr(session, f"_preroll_drained_{user_id}", True)
             else:
                 await session.asrs[user_id].feed_audio(pcm_48k_mono)
+
+    def _restore_duck(self, session) -> None:
+        """Undo live barge-in ducking after a false alarm (backchannel/noise)."""
+        src = session.active_source
+        if src is not None and getattr(src, "duck", 1.0) < 1.0:
+            try:
+                src.set_duck(1.0)
+                logger.info("[barge-in] false alarm — restoring playback volume")
+            except Exception:
+                pass
 
     # --- Diagnostic trace (toggle via env VOICE_AGENT_TRACE=1) -----------
 
@@ -1241,6 +1284,7 @@ class VoiceAgentBot(discord.Client):
                     f"[ASR/{source}] empty ASR result from {user_name} "
                     f"({utt_ms}ms of audio) — dropped"
                 )
+                self._restore_duck(session)
                 return
             text = asr_result.text.strip()
 
@@ -1249,6 +1293,7 @@ class VoiceAgentBot(discord.Client):
                     f"[ASR/{source}] dropping {utt_ms}ms utterance from {user_name}: "
                     f"{text!r} (too short to be real speech)"
                 )
+                self._restore_duck(session)
                 return
 
             # Pure-punctuation guard: even with enough audio, if ASR produced no
@@ -1257,6 +1302,7 @@ class VoiceAgentBot(discord.Client):
             content_chars = _re.sub(r"[\s\W_]+", "", text, flags=_re.UNICODE)
             if len(content_chars) < 1:
                 logger.info(f"[ASR/{source}] dropping pure-punct from {user_name}: {text!r}")
+                self._restore_duck(session)
                 return
 
             # Anti-interruption acknowledgement filter: while bot is audibly
@@ -1278,6 +1324,7 @@ class VoiceAgentBot(discord.Client):
                     f"[ASR/{source}] treating {text!r} as listener ack "
                     f"(bot speaking) — not interrupting"
                 )
+                self._restore_duck(session)
                 return
 
             logger.info(
