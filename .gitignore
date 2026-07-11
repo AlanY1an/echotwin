@@ -19,3 +19,6 @@ prompts/personas/*
 config.yaml
 !prompts/personas/ouyang_zh.md
 !prompts/personas/ariana_en.md
+
+# Demo guest-line audio (regenerate with scripts/gen_guest_lines.py)
+scripts/demo_lines/
