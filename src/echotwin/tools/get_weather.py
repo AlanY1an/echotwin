@@ -47,13 +47,17 @@ def _resolve_city(name: str) -> str:
 class GetWeather(Tool):
     name = "get_weather"
     description = (
-        "获取天气。参数 city(城市名,中文/英文均可,如 台北、Tokyo),"
+        "获取天气。参数 city(城市名,中文/英文均可,如 台北、Tokyo);"
+        "用户没说城市就【省略 city 参数】(自动用用户所在城市),严禁自己猜一个城市。"
         "when(today=今天 / tomorrow=明天 / 3day=未来三天),默认 today。"
     )
     input_schema = {
         "type": "object",
         "properties": {
-            "city": {"type": "string", "description": "城市名,中文或英文"},
+            "city": {
+                "type": "string",
+                "description": "城市名,中文或英文。仅在用户明确提到城市时传;没提到就省略此参数,不要猜",
+            },
             "when": {
                 "type": "string",
                 "enum": ["today", "tomorrow", "3day"],
