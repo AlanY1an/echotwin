@@ -55,17 +55,18 @@ def _ts(line: str) -> str:
     return line.split(" | ", 1)[0].split(".")[0]
 
 
-@on(r"\[organic\] (\w+): verdict=(\w+) score=\d+ signals=(\[[^\]]*\]) text='(.*)'")
+# text is a Python repr — single OR double quoted depending on apostrophes.
+@on(r"""\[organic\] (\w+): verdict=(\w+) score=\d+ signals=(\[[^\]]*\]) text=(['"])(.*)\4""")
 def _user(m, line):
-    name, verdict, signals, text = m.groups()
+    name, verdict, signals, _q, text = m.groups()
     if verdict == "accept":
         return f"{CYAN}{BOLD}  🎙  {name}{R}{CYAN}  “{text}”{R}"
     return f"{GRAY}  ·  {name} said “{text}” — not addressed to the bot ({verdict}), just eavesdropping{R}"
 
 
-@on(r"\[respond\] LLM done, total_chars=\d+ text='(.*)'")
+@on(r"""\[respond\] LLM done, total_chars=\d+ text=(['"])(.*)\1""")
 def _bot(m, line):
-    text = m.group(1)
+    text = m.group(2)
     if not text:
         return None
     # The model's own leading [bracket] cue, shown verbatim as its emotional
@@ -112,9 +113,8 @@ def _latency(m, line):
 @on(r"\[emotion-sidecar\] uid=\d+ emotion=(\w+)")
 def _emotion(m, line):
     emo = m.group(1)
-    if emo == "NEUTRAL":
-        return None
-    return f"{PINK}{BOLD}  emotion detected in voice: {emo}{R}"
+    color = GRAY if emo == "NEUTRAL" else PINK
+    return f"{color}{BOLD}  voice emotion (SenseVoice): {emo}{R}"
 
 
 @on(r"\[nickname\] guild \d+: set nick to '(.*)'")
