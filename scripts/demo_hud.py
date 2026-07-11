@@ -60,29 +60,7 @@ def _user(m, line):
     name, verdict, signals, text = m.groups()
     if verdict == "accept":
         return f"{CYAN}{BOLD}  🎙  {name}{R}{CYAN}  “{text}”{R}"
-    return f"{GRAY}  ·  {name} said “{text}” — not addressed to bot ({verdict}), eavesdropping{R}"
-
-
-def _read_emotion(text: str) -> str | None:
-    """Ariana carries her felt emotion in the leading [bracket] cue. That cue
-    IS her read of the room — surface it as a 'senses' line. This reflects real
-    semantic understanding (she comforts sad, celebrates joy), unlike the
-    acoustic emotion classifier which stays flat on synthesized speech."""
-    cues = re.findall(r"\[([^\]]{1,40})\]", text)
-    if not cues:
-        return None
-    cue = cues[0].strip().lower()
-    buckets = [
-        (("sad", "soft", "warm", "gentle", "tender", "gentle", "gently", "gentle", "whisper", "sorry", "gentle"), "TENDERNESS — she softened to comfort"),
-        (("excited", "thrilled", "cheer", "delighted", "joy", "happy", "celebrat"), "JOY — she lit up to celebrate"),
-        (("laugh", "chuckle", "teasing", "playful", "grin", "smirk", "amused"), "PLAYFULNESS — she's bantering back"),
-        (("surprised", "shock", "gasp"), "SURPRISE"),
-        (("sigh", "tired", "exasperat"), "WRY — mock-exasperation"),
-    ]
-    for keys, label in buckets:
-        if any(k in cue for k in keys):
-            return label
-    return cue.upper()
+    return f"{GRAY}  ·  {name} said “{text}” — not addressed to the bot ({verdict}), just eavesdropping{R}"
 
 
 @on(r"\[respond\] LLM done, total_chars=\d+ text='(.*)'")
@@ -90,10 +68,12 @@ def _bot(m, line):
     text = m.group(1)
     if not text:
         return None
+    # The model's own leading [bracket] cue, shown verbatim as its emotional
+    # intent — no editorializing.
     out = ""
-    felt = _read_emotion(text)
-    if felt:
-        out += f"{PINK}{BOLD}  ♥  senses {felt}{R}\n"
+    cues = re.findall(r"\[([^\]]{1,40})\]", text)
+    if cues:
+        out += f"{PINK}{BOLD}  emotional tone: {cues[0].strip()}{R}\n"
     out += f"{MAGENTA}{BOLD}  🤖  EchoTwin{R}{MAGENTA}  “{text}”{R}"
     return out
 
@@ -117,12 +97,16 @@ def _latency(m, line):
     for sm in re.finditer(r"(\w+)→(\w+)=(\d+)ms", stages):
         a, b, ms = sm.group(1), sm.group(2), int(sm.group(3))
         label = {
-            "asr_done": "ASR", "consumer_start": "queue", "filler_queued": "filler",
-            "llm_first_delta": "LLM", "first_audio": "TTS first audio",
+            "asr_done": "heard (ASR)", "consumer_start": "queue",
+            "filler_queued": "filler", "llm_first_delta": "thought (LLM)",
+            "first_audio": "spoke (Fish TTS)",
         }.get(b, b)
         parts.append(f"{label} {ms}ms")
+    # A turn with no LLM stage (empty/dropped) isn't worth a big timing line.
+    if total < 40 and "LLM" not in " ".join(parts) and "thought" not in " ".join(parts):
+        return None
     color = GREEN if total < 1500 else YELLOW
-    return f"{color}  ⏱  {BOLD}{total}ms{R}{color} end-to-end   {DIM}({' → '.join(parts)}){R}"
+    return f"{color}  ⏱  {BOLD}{total}ms{R}{color} mouth-to-ear   {DIM}({'  →  '.join(parts)}){R}"
 
 
 @on(r"\[emotion-sidecar\] uid=\d+ emotion=(\w+)")
@@ -130,8 +114,7 @@ def _emotion(m, line):
     emo = m.group(1)
     if emo == "NEUTRAL":
         return None
-    face = {"SAD": "😔", "HAPPY": "😄", "ANGRY": "😠", "SURPRISED": "😮", "FEARFUL": "😨", "DISGUSTED": "😖"}.get(emo, "♥")
-    return f"{PINK}{BOLD}  {face}  heard emotion in the voice: {emo}{R}"
+    return f"{PINK}{BOLD}  emotion detected in voice: {emo}{R}"
 
 
 @on(r"\[nickname\] guild \d+: set nick to '(.*)'")
