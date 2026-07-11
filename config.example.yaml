@@ -67,13 +67,19 @@ llm:
     max_tokens: 300
     temperature: 0.7
     enable_prompt_cache: true
-  groq_chat: # main brain on Groq (streaming + tools). Measured: ~500ms faster first
-    # sentence than Haiku for casual chat, BUT free-tier TPM (~6k) dies after
-    # ~3 turns/min, tool calling is unreliable with reasoning off, and replies
-    # drop the emotion tags. Viable with a paid tier + a trimmed prompt.
-    api_key: env:GROQ_API_KEY
-    model: qwen/qwen3-32b
-    max_tokens: 300
+  groq_chat: # OpenAI-compatible main brain (streaming + tools) — Groq, Cerebras, etc.
+    # Measured examples (full persona prompt):
+    #   gpt-oss-120b @ Cerebras, reasoning_effort low: first event ~350-550ms,
+    #     reliable tool calls, persona slightly flatter than Haiku. Best fast option.
+    #   qwen3-32b @ Groq, reasoning none: fast but tool calls unreliable and
+    #     free-tier TPM (~6k) dies after ~3 turns/min.
+    #   zai-glm-4.7 @ Cerebras: best persona among fast models but thinks ~1.5k
+    #     chars per turn → slower than Haiku. Not worth it.
+    api_key: env:CEREBRAS_API_KEY # or env:GROQ_API_KEY with the Groq base_url
+    model: gpt-oss-120b
+    base_url: https://api.cerebras.ai/v1/chat/completions # default: Groq's endpoint
+    reasoning_effort: low # gpt-oss: low/medium/high; qwen: none; omit for others
+    max_tokens: 500
     temperature: 0.7
   groq: # gray-zone arbitration only (~350ms, $0.29/$0.59 per MTok)
     api_key: env:GROQ_API_KEY

@@ -132,12 +132,15 @@ class GroqCfg(BaseModel):
 
 
 class GroqChatCfg(BaseModel):
-    """Groq as the MAIN conversation brain (streaming + tool use).
-    Separate from the arbiter's GroqCfg — different token/temperature needs."""
+    """OpenAI-compatible MAIN conversation brain (streaming + tool use) —
+    Groq, Cerebras, or any /chat/completions endpoint. Separate from the
+    arbiter's GroqCfg — different token/temperature needs."""
     api_key: str | None = None
     model: str = "qwen/qwen3-32b"
     max_tokens: int = 300
     temperature: float = 0.7
+    base_url: str = "https://api.groq.com/openai/v1/chat/completions"
+    reasoning_effort: str | None = None  # e.g. "low" for gpt-oss; None = provider default
 
 
 class LLMCfg(BaseModel):

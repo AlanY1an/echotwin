@@ -105,6 +105,8 @@ def make_llm(cfg: Config) -> LLMProvider:
             model=g.model,
             max_tokens=g.max_tokens,
             temperature=g.temperature,
+            base_url=g.base_url,
+            reasoning_effort=g.reasoning_effort,
         )
     raise ValueError(f"Unknown LLM provider: {name}")
 

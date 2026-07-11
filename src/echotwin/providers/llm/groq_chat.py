@@ -32,7 +32,7 @@ from .base import (
     ToolUseStart,
 )
 
-_URL = "https://api.groq.com/openai/v1/chat/completions"
+_DEFAULT_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 _STOP_REASON = {
     "stop": "end_turn",
@@ -119,11 +119,17 @@ class GroqChatProvider(LLMProvider):
         model: str = "qwen/qwen3-32b",
         max_tokens: int = 300,
         temperature: float = 0.7,
+        base_url: str = _DEFAULT_URL,
+        reasoning_effort: str | None = None,
     ) -> None:
         self._api_key = api_key
         self.model = model
         self._max_tokens = max_tokens
         self._temperature = temperature
+        # Any OpenAI-compatible /chat/completions endpoint works (Groq,
+        # Cerebras, …) — same streaming shape, same tool_calls deltas.
+        self._url = base_url
+        self._reasoning_effort = reasoning_effort
         # groq_qwen3_32b-style key for the pricing table
         self.cost_prefix = "groq_" + model.split("/")[-1].replace("-", "_").replace(".", "_")
 
@@ -144,7 +150,9 @@ class GroqChatProvider(LLMProvider):
         oai_tools = _tools_to_openai(tools)
         if oai_tools:
             body["tools"] = oai_tools
-        if "qwen" in self.model.lower():
+        if self._reasoning_effort:
+            body["reasoning_effort"] = self._reasoning_effort
+        elif "qwen" in self.model.lower():
             body["reasoning_effort"] = "none"  # disable thinking — latency killer
 
         headers = {
@@ -160,7 +168,7 @@ class GroqChatProvider(LLMProvider):
 
         async with aiohttp.ClientSession() as http:
             async with http.post(
-                _URL, json=body, headers=headers,
+                self._url, json=body, headers=headers,
                 timeout=aiohttp.ClientTimeout(total=60, sock_connect=10),
             ) as resp:
                 if resp.status != 200:
