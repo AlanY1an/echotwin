@@ -23,7 +23,11 @@ dependencies = [
     "onnxruntime>=1.17.0",
     # Streaming ASR: funasr paraformer online is unusable on M-series CPU (RTF≈1.5);
     # sherpa zipformer int8 measures ~15ms/chunk (scripts/spike_*.py)
-    "sherpa-onnx>=1.13.2",
+    # Pinned EXACTLY: 1.13.4 is broken on macOS arm64 — decode emits empty or
+    # nondeterministic garbage ("吒厢吒厢…") on clean audio. Verified 2026-07-11
+    # with raw-API repro on the bilingual zipformer; 1.13.2 decodes correctly.
+    # Re-verify with tests/harness/test_streaming_asr.py before bumping.
+    "sherpa-onnx==1.13.2",
     "huggingface-hub>=1.0",
     "opuslib-next>=1.1.0",
     "soxr>=0.5.0",
