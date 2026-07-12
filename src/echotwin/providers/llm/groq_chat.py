@@ -167,14 +167,18 @@ class GroqChatProvider(LLMProvider):
         finish_reason = "stop"
         usage: dict = {}
 
-        # Free-tier endpoints (Cerebras/Groq) rate-limit on requests-per-minute.
-        # A burst of turns can trip a 429 whose body says "try again in Ns".
-        # Retry a few times with backoff so a transient limit doesn't kill the
-        # turn mid-conversation (important during demos / rapid exchanges).
+        # Retry loop covers two transient failure modes:
+        # - 429 rate limits (free-tier RPM/TPM): wait per the body's
+        #   "try again in Ns" hint, then re-request.
+        # - Empty completions: gpt-oss occasionally finishes with zero content
+        #   and no tool calls. Nothing has been yielded yet in that case, so a
+        #   silent re-request (~200ms on Cerebras) is invisible to the user.
         import asyncio
         max_retries = 4
+        empty_retries = 2
         async with aiohttp.ClientSession() as http:
             for attempt in range(max_retries + 1):
+                emitted = False
                 async with http.post(
                     self._url, json=body, headers=headers,
                     timeout=aiohttp.ClientTimeout(total=60, sock_connect=10),
@@ -210,8 +214,10 @@ class GroqChatProvider(LLMProvider):
                             finish_reason = choice["finish_reason"]
                         delta = choice.get("delta") or {}
                         if delta.get("content"):
+                            emitted = True
                             yield TextDelta(text=delta["content"])
                         for tc in delta.get("tool_calls") or []:
+                            emitted = True
                             idx = tc.get("index", 0)
                             if idx not in open_tools:
                                 tool_id = tc.get("id") or f"call_{idx}"
@@ -225,7 +231,12 @@ class GroqChatProvider(LLMProvider):
                                 yield ToolUseInputDelta(
                                     tool_use_id=open_tools[idx], partial_json=args
                                 )
-                    break  # streamed successfully — leave the retry loop
+                if not emitted and attempt < empty_retries:
+                    logger.warning(
+                        f"[groq_chat] empty completion — retrying ({attempt + 1}/{empty_retries})"
+                    )
+                    continue
+                break  # streamed successfully (or retries exhausted)
 
         for tool_id in open_tools.values():
             yield ToolUseEnd(tool_use_id=tool_id)
