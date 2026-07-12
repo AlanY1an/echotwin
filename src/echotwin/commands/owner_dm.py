@@ -161,6 +161,19 @@ def register_owner_commands(tree: app_commands.CommandTree, bot: "VoiceAgentBot"
             await bot.sync_nickname_in_active_guilds()
         except Exception as e:
             logger.warning(f"sync nickname failed: {e}")
+        # The incoming persona says hi in every channel we're live in — a
+        # silent voice swap is confusing for listeners.
+        try:
+            from echotwin.i18n import prompts as _prompts
+            from .public import _do_greeting
+
+            swap_prompt = _prompts.SWAP_GREETING_PROMPT[new_persona.language]
+            for g in bot.guilds:
+                vc = g.voice_client
+                if vc is not None and vc.is_connected():
+                    await _do_greeting(bot, vc, g, prompt_override=swap_prompt)
+        except Exception as e:
+            logger.warning(f"swap greeting failed: {e}")
         await interaction.followup.send(
             t("resp.persona_switched", loc, name=name, display=new_persona.name),
             ephemeral=True,

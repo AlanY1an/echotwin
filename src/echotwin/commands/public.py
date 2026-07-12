@@ -171,9 +171,20 @@ def register_public_commands(tree: app_commands.CommandTree, bot: "VoiceAgentBot
             await interaction.response.send_message(f"```\n{text}\n```", ephemeral=True)
 
 
-async def _do_greeting(bot: "VoiceAgentBot", voice_client: discord.VoiceClient, guild: discord.Guild) -> None:
-    """Synthesize a greeting and play it via TTS."""
-    text = bot.config.bot.greeting.text
+async def _do_greeting(
+    bot: "VoiceAgentBot",
+    voice_client: discord.VoiceClient,
+    guild: discord.Guild,
+    *,
+    prompt_override: str | None = None,
+) -> None:
+    """Synthesize a greeting and play it via TTS.
+
+    prompt_override swaps the LLM instruction (e.g. the persona-swap hello)
+    while keeping the same persona voice/system-prompt plumbing. A fixed
+    config greeting text is only used for the plain join greeting.
+    """
+    text = bot.config.bot.greeting.text if prompt_override is None else None
     if text is None:
         # LLM-generated greeting
         channel_name = voice_client.channel.name if voice_client.channel else ""
@@ -184,7 +195,7 @@ async def _do_greeting(bot: "VoiceAgentBot", voice_client: discord.VoiceClient, 
             channel_name=channel_name,
             members_online=members,
         )
-        prompt = _locale.GREETING_PROMPT[bot.persona.language].format(
+        prompt = prompt_override or _locale.GREETING_PROMPT[bot.persona.language].format(
             channel=channel_name, members=members
         )
         text = ""

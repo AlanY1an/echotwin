@@ -77,6 +77,11 @@ GREETING_PROMPT = {
     "en": "[system] You just joined the voice channel \"{channel}\" with {members} people in it. Greet them briefly in character — one sentence.",
 }
 
+SWAP_GREETING_PROMPT = {
+    "zh": "[系统通知] 你刚被切换上场(接替了上一个人格)。用你的人设跟频道里的人简短打个招呼,说清你是谁,1 句话。",
+    "en": "[system] You've just been swapped in, replacing the previous persona. Greet the channel briefly in character and say who you are — one sentence.",
+}
+
 FAREWELL_PROMPT = {
     "zh": "[系统通知] 你即将离开「{channel}」语音频道(原因: {reason})。说一句简短温柔的告别,不超过 1 句。",
     "en": "[system] You are about to leave the voice channel \"{channel}\" (reason: {reason}). Say a brief, warm goodbye — one sentence max.",
