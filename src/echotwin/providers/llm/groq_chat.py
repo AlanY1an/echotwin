@@ -146,6 +146,9 @@ class GroqChatProvider(LLMProvider):
             "max_completion_tokens": self._max_tokens,
             "stream": True,
             "stream_options": {"include_usage": True},
+            # Curb gpt-oss's occasional degeneration into a repeated token
+            # (e.g. "Well … … … …" filling the whole reply).
+            "frequency_penalty": 0.5,
             "messages": _messages_to_openai(system, messages),
         }
         oai_tools = _tools_to_openai(tools)
@@ -179,6 +182,7 @@ class GroqChatProvider(LLMProvider):
         async with aiohttp.ClientSession() as http:
             for attempt in range(max_retries + 1):
                 emitted = False
+                _degen_tail = ""
                 async with http.post(
                     self._url, json=body, headers=headers,
                     timeout=aiohttp.ClientTimeout(total=60, sock_connect=10),
@@ -214,8 +218,20 @@ class GroqChatProvider(LLMProvider):
                             finish_reason = choice["finish_reason"]
                         delta = choice.get("delta") or {}
                         if delta.get("content"):
+                            # Degeneration guard: gpt-oss sometimes gets stuck
+                            # emitting whitespace/ellipsis forever. If the tail
+                            # is a long run with no letters/digits, stop the
+                            # stream early rather than speak "… … … …".
+                            chunk_txt = delta["content"]
+                            _degen_tail += chunk_txt
+                            if len(_degen_tail) > 30 and not re.search(r"[0-9A-Za-z一-鿿]", _degen_tail[-30:]):
+                                logger.warning("[groq_chat] degenerate output (whitespace/ellipsis run) — cutting stream")
+                                finish_reason = "stop"
+                                break
+                            if re.search(r"[0-9A-Za-z一-鿿]", chunk_txt):
+                                _degen_tail = chunk_txt  # reset window on real content
                             emitted = True
-                            yield TextDelta(text=delta["content"])
+                            yield TextDelta(text=chunk_txt)
                         for tc in delta.get("tool_calls") or []:
                             emitted = True
                             idx = tc.get("index", 0)
