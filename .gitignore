@@ -27,3 +27,6 @@ scripts/demo_lines/
 scripts/demo_hud.py
 scripts/play_demo.py
 scripts/gen_guest_lines.py
+
+# auto demo director (local-only)
+scripts/auto_demo.py
