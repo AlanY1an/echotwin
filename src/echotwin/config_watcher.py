@@ -108,6 +108,20 @@ class ConfigWatcher:
         from echotwin.wake_word.fast_response import FastResponseCache
         from echotwin.wake_word.matcher import WakeWordMatcher
 
+        # ASR + tool language follow the persona (same as /persona-admin use)
+        for sess in self._bot.sessions.values():
+            stale_asrs = list(sess.asrs.values())
+            sess.asrs.clear()
+            for _asr in stale_asrs:
+                try:
+                    await _asr.close()
+                except Exception:
+                    pass
+        try:
+            self._bot.build_tool_registry()
+        except Exception as e:
+            logger.warning(f"[config-watcher] tool registry rebuild failed: {e}")
+
         self._bot.wake_matcher = WakeWordMatcher(wake_words=persona.wake_words)
         self._bot.fast_cache = FastResponseCache(
             persona_id=persona.id,
