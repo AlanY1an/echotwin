@@ -4,6 +4,16 @@
 
 *An AI Discord voice bot that talks back in a cloned voice — give a voice an echo twin.*
 
+## Demo
+
+A live, unedited run — banter, real weather/time tool calls, an emotional turn, a mid-sentence barge-in, and a one-command persona swap into a bilingual character — with the pipeline telemetry (ASR → addressee → LLM → tools → Fish TTS, per-turn latency) traced live alongside.
+
+https://github.com/AlanY1an/echotwin/raw/main/docs/media/echotwin-demo.mp4
+
+<video src="https://github.com/AlanY1an/echotwin/raw/main/docs/media/echotwin-demo.mp4" controls width="100%"></video>
+
+> If the inline player doesn't load, [download / view the clip directly](docs/media/echotwin-demo.mp4).
+
 Full-duplex realtime Discord voice bot. Fish Audio cloned-voice TTS + Claude Haiku 4.5 LLM (with tool calling) + local streaming ASR (sherpa-onnx zipformer, partials while you speak) + Silero VAD.
 
 **What it does best today: one-on-one voice conversation.** Join a channel, talk naturally, get cloned-voice replies fast: first voice in ~0.6 s, full reply pipeline ~1.2 s median (ASR 19 ms / LLM ~970 ms / Fish TTS 174 ms — measured, reproducible, see [Latency](#latency)) — speculative ASR/LLM execution, pre-opened TTS sockets, and cached fillers do the work. Barge-in, tool calls (time/date/weather), hot-swappable personas, per-turn cost tracking with budget caps.
