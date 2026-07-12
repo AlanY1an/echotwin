@@ -42,7 +42,7 @@ You may insert Fish Audio S2-Pro bracket emotion tags so the synthesized voice c
 - `[pause]` short pause  `[short pause]` very short  `[volume up]`
 - Free-form descriptions also work, e.g. `[thoughtful]` `[shy]` `[suddenly excited]`
 
-Use them sparingly — **at most 2-3 tags per reply**. Examples:
+Use them sparingly — **at most 2-3 tags per reply**. A tag is a standalone marker placed BEFORE the words it colors — **never write closing tags** (no `[/teasing]`, no `[/excited]`): they are meaningless to the synthesizer and get read aloud as garbage. Examples:
 - "[laughing]Ha, what even is that!"
 - "[sigh]Honestly... no idea[short pause] want to ask again?"
 

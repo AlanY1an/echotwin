@@ -303,33 +303,16 @@ class VoiceAgentBot(discord.Client):
                 "[arbiter] arbiter_provider 已配置但缺 GROQ_API_KEY — 复用对话 LLM"
             )
 
-        # Tool registry — built once at startup based on config.tools.enabled
-        from .tools.registry import ToolRegistry
-        from .tools.get_time import GetTime
-        from .tools.get_date import GetDate
-        from .tools.get_weather import GetWeather
-
-        self.tool_registry = ToolRegistry()
-        enabled = set(self.config.tools.enabled)
-        tz = self.config.tools.default_timezone
-        # Tool output language follows the active persona so an English persona
-        # gets English weather/time strings, not the zh defaults.
-        tool_lang = getattr(self.persona, "language", "zh") if getattr(self, "persona", None) else "zh"
-        if "get_time" in enabled:
-            self.tool_registry.register(GetTime(default_timezone=tz, lang=tool_lang))
-        if "get_date" in enabled:
-            self.tool_registry.register(GetDate(default_timezone=tz, lang=tool_lang))
-        if "get_weather" in enabled:
-            # wttr.in is keyless; no env var needed
-            self.tool_registry.register(
-                GetWeather(default_city=self.config.tools.get_weather.default_city, lang=tool_lang)
-            )
-
         # Load runtime config FIRST (overrides config.yaml for persona/voice/
         # wakeword) — persona-derived resources below must be built from the
         # runtime-selected persona, not the yaml one.
         from .commands.owner_dm import load_runtime_config
         load_runtime_config(self)
+
+        # Tool registry — built AFTER runtime config so tool output language
+        # follows the persona actually in effect (was: yaml persona → Chinese
+        # tool strings under a runtime-selected English persona).
+        self.build_tool_registry()
 
         # Wake matcher + fast-response cache + quota-limit audio for the
         # (possibly runtime-overridden) active persona.
@@ -719,6 +702,32 @@ class VoiceAgentBot(discord.Client):
                 setattr(session, f"_preroll_drained_{user_id}", True)
             else:
                 await session.asrs[user_id].feed_audio(pcm_48k_mono)
+
+    def build_tool_registry(self) -> None:
+        """(Re)build the tool registry from config + the ACTIVE persona.
+
+        Called at startup (after runtime config resolves the persona) and on
+        persona hot-swap — tool output language follows the persona.
+        """
+        from .tools.registry import ToolRegistry
+        from .tools.get_time import GetTime
+        from .tools.get_date import GetDate
+        from .tools.get_weather import GetWeather
+
+        registry = ToolRegistry()
+        enabled = set(self.config.tools.enabled)
+        tz = self.config.tools.default_timezone
+        tool_lang = getattr(self.persona, "language", "zh") if getattr(self, "persona", None) else "zh"
+        if "get_time" in enabled:
+            registry.register(GetTime(default_timezone=tz, lang=tool_lang))
+        if "get_date" in enabled:
+            registry.register(GetDate(default_timezone=tz, lang=tool_lang))
+        if "get_weather" in enabled:
+            # wttr.in is keyless; no env var needed
+            registry.register(
+                GetWeather(default_city=self.config.tools.get_weather.default_city, lang=tool_lang)
+            )
+        self.tool_registry = registry
 
     def _restore_duck(self, session) -> None:
         """Undo live barge-in ducking after a false alarm (backchannel/noise)."""

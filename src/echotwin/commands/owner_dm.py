@@ -105,6 +105,21 @@ def register_owner_commands(tree: app_commands.CommandTree, bot: "VoiceAgentBot"
         bot.persona = new_persona
         for sess in bot.sessions.values():
             sess.dialogue.clear()
+            # ASR follows persona language — drop per-user ASR instances so the
+            # next utterance lazily rebuilds them with the new language's model
+            # (otherwise a zh persona keeps hearing through the en zipformer).
+            stale_asrs = list(sess.asrs.values())
+            sess.asrs.clear()
+            for _asr in stale_asrs:
+                try:
+                    await _asr.close()
+                except Exception:
+                    pass
+        # Tool output language follows the persona too
+        try:
+            bot.build_tool_registry()
+        except Exception as e:
+            logger.warning(f"tool registry rebuild failed: {e}")
         save_runtime_config(bot)
         # Rebuild persona-bound resources so wake words / addressee detector /
         # fast-response cache match the new persona (otherwise we'd still be
